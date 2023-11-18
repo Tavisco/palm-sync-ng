@@ -1,0 +1,16 @@
+<div class="card flex justify-content-center">
+    <p-fileUpload
+    name="file"
+    [customUpload]="true"
+    [showCancelButton]="false"
+    (uploadHandler)="customUpload($event)"
+    (onSelect)="onFileSelect($event)"
+    accept=".prc,.pdb"
+    uploadLabel="Install">
+    <ng-template pTemplate="content">
+      <div class="ui-message ui-widget">
+        <p>Click or drag files to this area to upload.</p>
+      </div>
+    </ng-template>
+  </p-fileUpload>
+</div>

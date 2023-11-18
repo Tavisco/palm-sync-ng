@@ -1,1 +1,19 @@
 /* You can add global styles to this file, and also import other style files */
+
+// Import PrimeNG styles
+@import 'primeng/resources/themes/lara-light-blue/theme.css';
+@import 'primeng/resources/primeng.min';
+
+// Import PrimeFlex styles
+@import 'primeflex/primeflex';
+
+// Import PrimeIcons styles
+@import 'primeicons/primeicons';
+
+// Set a slightly dark background for the entire application
+body {
+    background-color: #333; // Adjust the color as needed
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: white; // Adjust text color as needed
+  }
