@@ -1,9 +1,60 @@
 import { Component } from '@angular/core';
-import { MessageService } from 'primeng/api';
 
-interface UploadEvent {
-  originalEvent: Event;
-  files: File[];
+import { UsbSyncServer } from '../palm-sync/sync-servers/usb-sync-server';
+
+import {DlpGetSysDateTimeReqType} from '../palm-sync/protocols/dlp-commands';
+import {SyncConnectionOptions} from '../palm-sync/protocols/sync-connections';
+import {SyncFn, SyncServer} from '../palm-sync/sync-servers/sync-server';
+import pEvent from 'p-event';
+import { SyncConnection } from '../palm-sync/protocols/sync-connections';
+
+
+// interface UploadEvent {
+//   originalEvent: Event;
+//   files: File[];
+// }
+
+// async function runSyncForCommand(syncFn: SyncFn) {
+
+//   const encoding = '';
+
+//   let connectionString: string = 'usb';
+
+//   const syncConnectionOptions: SyncConnectionOptions = encoding
+//     ? {
+//         requestSerializeOptions: {encoding},
+//         responseDeserializeOptions: {encoding},
+//       }
+//     : {};
+
+//   return await createSyncServerAndRunSync(
+//     connectionString,
+//     syncFn,
+//     syncConnectionOptions
+//   );
+// }
+
+async function runSync(
+    /** Sync function to run for new connections. */
+    syncFn: SyncFn,
+    /** Additional options for the sync connection. */
+    opts: SyncConnectionOptions = {}
+) {
+  var syncServer: SyncServer = new UsbSyncServer(syncFn, opts);
+
+  syncServer.start();
+
+  console.log('Waiting for connection...');
+  const connection: SyncConnection = await pEvent(syncServer, 'connect');
+  console.log('Connected!');
+  console.log('');
+
+  await pEvent(syncServer, 'disconnect');
+  console.log('');
+  console.log('Disconnected');
+
+  await syncServer.stop();
+  return connection;
 }
 
 @Component({
@@ -13,15 +64,44 @@ interface UploadEvent {
 })
 export class UploadPrcComponent {
 
-  enableFileUpload = true; // Set this property based on your logic
 
-  customUpload(event: any) {
+
+  async customUpload(event: any) {
     // Access the files from the event
     const files: File[] = event.files;
 
     // Log the size of each file
     files.forEach(file => {
       console.log(`File Name: ${file.name}, Size: ${this.formatBytes(file.size)}`);
+    });
+
+    const device = await navigator.usb.requestDevice({ filters: [{
+      // vendorId: 0x045E, // Microsoft
+      // productId: 0x028E // XBox 360 Controller
+  }]});
+
+    await runSync(async (dlpConnection) => {
+      console.log('Preparing command');
+      const {dateTime: deviceDateTime} = await dlpConnection.execute(
+        DlpGetSysDateTimeReqType.with()
+      );
+      console.log('command executed!');
+      const lines: Array<[string, string]> = [
+        ['OS version', dlpConnection.sysInfo.romSWVersion.toString()],
+        ['DLP version', dlpConnection.sysInfo.dlpVer.toString()],
+        ['User name', dlpConnection.userInfo.userName],
+        ['Last sync PC', dlpConnection.userInfo.lastSyncPc.toString()],
+        ['User ID', dlpConnection.userInfo.userId.toString()],
+        ['Last sync', dlpConnection.userInfo.lastSyncDate.toLocaleString()],
+        [
+          'Last sync succ',
+          dlpConnection.userInfo.succSyncDate.toLocaleString(),
+        ],
+        ['System time', deviceDateTime.toLocaleString()],
+      ];
+      console.log(
+        lines.map(([label, value]) => `\t${label}:\t${value}`).join('\n')
+      );
     });
   }
 
@@ -43,15 +123,4 @@ export class UploadPrcComponent {
     console.log('File selected:', event);
   }
 
-  // uploadedFiles: any[] = [];
-
-  // constructor(private messageService: MessageService) {}
-
-  // onUpload(event:UploadEvent) {
-  //     for(let file of event.files) {
-  //         this.uploadedFiles.push(file);
-  //     }
-
-  //     this.messageService.add({severity: 'info', summary: 'File Uploaded', detail: ''});
-  // }
 }

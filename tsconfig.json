@@ -13,7 +13,7 @@
     "sourceMap": true,
     "declaration": false,
     "downlevelIteration": true,
-    "experimentalDecorators": true,
+    "experimentalDecorators": false,
     "moduleResolution": "node",
     "importHelpers": true,
     "target": "ES2022",
@@ -22,6 +22,11 @@
     "lib": [
       "ES2022",
       "dom"
+    ],
+    "types": [
+      "node",
+      "w3c-web-usb",
+      "duplexify"
     ]
   },
   "angularCompilerOptions": {
