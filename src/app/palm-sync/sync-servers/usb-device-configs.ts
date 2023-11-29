@@ -361,6 +361,12 @@ export const USB_DEVICE_CONFIGS_BY_ID = Object.fromEntries(
   USB_DEVICE_CONFIGS.map((config) => [config.usbId, config])
 );
 
+export const HANDELD_VENDORS_ID: USBDeviceFilter[] = USB_DEVICE_CONFIGS.map(config => ({
+  vendorId: config.vendorId,
+  productId: config.productId,
+}));
+
+
 /** Convert a {vendorId, productId} tuple to string. */
 export function toUsbId(
   t:

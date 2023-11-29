@@ -7,6 +7,7 @@ import {SyncConnectionOptions} from '../palm-sync/protocols/sync-connections';
 import {SyncFn, SyncServer} from '../palm-sync/sync-servers/sync-server';
 import pEvent from 'p-event';
 import { SyncConnection } from '../palm-sync/protocols/sync-connections';
+import { HANDELD_VENDORS_ID } from '../palm-sync/sync-servers/usb-device-configs';
 
 
 // interface UploadEvent {
@@ -73,10 +74,7 @@ export class UploadPrcComponent {
       console.log(`File Name: ${file.name}, Size: ${this.formatBytes(file.size)}`);
     });
 
-    const device = await navigator.usb.requestDevice({ filters: [{
-      // vendorId: 0x045E, // Microsoft
-      // productId: 0x028E // XBox 360 Controller
-  }]});
+    await navigator.usb.requestDevice({ filters: HANDELD_VENDORS_ID});
 
     await runSync(async (dlpConnection) => {
       console.log('Preparing command');
