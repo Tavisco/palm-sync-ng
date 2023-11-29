@@ -44,14 +44,12 @@ async function runSync(
 
   syncServer.start();
 
-  console.log('Waiting for connection...');
+  console.log('Component: Waiting for connection...');
   const connection: SyncConnection = await pEvent(syncServer, 'connect');
-  console.log('Connected!');
-  console.log('');
+  console.log('Component: Connected!');
 
   await pEvent(syncServer, 'disconnect');
-  console.log('');
-  console.log('Disconnected');
+  console.log('Component: Disconnected');
 
   await syncServer.stop();
   return connection;

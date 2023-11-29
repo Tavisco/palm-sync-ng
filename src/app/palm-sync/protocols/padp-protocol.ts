@@ -197,7 +197,7 @@ export class PadpStream extends Duplex {
   /** Handle receiving a new SLP datagram. */
   onReceiveSlpDatagram(chunk: Buffer) {
     const slpDatagram = SlpDatagram.from(chunk);
-    this.log(
+    console.log(
       `<<< ${SlpDatagramType[slpDatagram.header.type]} ` +
         `xid ${slpDatagram.header.xid}: ` +
         chunk.toString('hex')
@@ -226,14 +226,14 @@ export class PadpStream extends Duplex {
           padpDatagram.header.sizeOrOffset.value !==
             this.ackListener.sizeOrOffset
         ) {
-          this.log(
+          console.log(
             '--- Ignoring unexpected ACK xid ' +
               `${slpDatagram.header.xid} ` +
               `[@${padpDatagram.header.sizeOrOffset.value}]`
           );
           return;
         }
-        this.log(
+        console.log(
           `<<< ACK xid ${this.ackListener.xid} ` +
             `[@${this.ackListener.sizeOrOffset}]`
         );
@@ -260,7 +260,7 @@ export class PadpStream extends Duplex {
       // sizeOrOffset. Our ACK either got lost or didn't arrive on time, so
       // the Palm device is retrying sending the same datagram. We will ignore
       // this datagram but will send back another ACK.
-      this.log(
+      console.log(
         '--- Ignoring duplicate PADP xid ' +
           `${slpDatagram.header.xid} ` +
           `[@${padpDatagram.header.sizeOrOffset.value}]`
@@ -271,7 +271,7 @@ export class PadpStream extends Duplex {
       // message is the reply to our earlier message and the ACK from the Palm
       // device was lost.
       if (this.ackListener && slpDatagram.header.xid === this.ackListener.xid) {
-        this.log(
+        console.log(
           `--- Received PADP xid ${slpDatagram.header.xid} reply without ACK`
         );
         this.ackListener.resolve();
@@ -342,7 +342,7 @@ export class PadpStream extends Duplex {
           return;
         }
         this.push(this.currentMessage.data.toBuffer());
-        this.log(
+        console.log(
           `<<< PUSH ${this.currentMessage.data.toBuffer().toString('hex')}`
         );
         this.currentMessage = null;
@@ -354,14 +354,14 @@ export class PadpStream extends Duplex {
             {slpDatagram, padpDatagram}
           );
         }
-        this.log(`--- Message incomplete, waiting for next PADP datagram`);
+        console.log(`--- Message incomplete, waiting for next PADP datagram`);
       }
     }
 
     // Send ACK after processing a DATA datagram.
     const ackSlpDatagram = this.createAckSlpDatagram(slpDatagram, padpDatagram);
     this.lastProcessedPadpDataChunk = chunk;
-    this.log(
+    console.log(
       `>>> ACK xid ${ackSlpDatagram.header.xid} ` +
         `[@${padpDatagram.header.sizeOrOffset.value}]: ` +
         ackSlpDatagram.serialize().toString('hex')
@@ -433,7 +433,7 @@ export class PadpStream extends Duplex {
 
         // Write SLP and wait for confirmation.
         const slpDatagramBuffer = slpDatagram.serialize();
-        this.log(
+        console.log(
           `>>> PADP xid ${xid} ` +
             `${i + 1}/${pieces.length} ` +
             `[@${padpDatagram.header.sizeOrOffset.value}]: ` +
@@ -450,7 +450,7 @@ export class PadpStream extends Duplex {
           );
         } catch (e: any) {
           error = new Error(`Error sending PADP xid ${xid}: ${e.message}`);
-          this.log(`--- ${error.message}`);
+          console.log(`--- ${error.message}`);
           continue;
         }
 
@@ -461,7 +461,7 @@ export class PadpStream extends Duplex {
           callback(new Error('Internal error: multiple concurrent writes'));
           return;
         }
-        this.log(
+        console.log(
           `--- Waiting for ACK on xid ${xid} ` +
             `${i + 1}/${pieces.length} ` +
             `[@${padpDatagram.header.sizeOrOffset.value}]`
@@ -485,7 +485,7 @@ export class PadpStream extends Duplex {
           error = new Error(
             `Error while waiting for ACK on xid ${xid}: ${e.message}`
           );
-          this.log(`--- ${error.message}`);
+          console.log(`--- ${error.message}`);
           this.ackListener = null;
           continue;
         }
@@ -497,7 +497,7 @@ export class PadpStream extends Duplex {
       // If we exhausted the number of retries and still ended up with an error,
       // return that to the caller.
       if (error) {
-        this.log(
+        console.log(
           `--- PADP xid ${xid} failed after ${PADP_MAX_RETRIES} retries`
         );
         callback(error);
@@ -550,7 +550,7 @@ export class PadpStream extends Duplex {
         : []),
     ].join('\n');
     this.emit('error', new Error(fullMessage));
-    this.log(`Error: ${fullMessage}`);
+    console.log(`Error: ${fullMessage}`);
   }
 
   private getNextXid() {

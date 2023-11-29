@@ -174,15 +174,18 @@ export class UsbConnectionStream extends Duplex {
     encoding: BufferEncoding | 'buffer',
     callback: (error?: Error | null) => void
   ) {
+    // console.log(`writing to endpoint ${this.config.outEndpoint}`);
+
     if (encoding !== 'buffer' || !(chunk instanceof Buffer)) {
       callback(new Error(`Unsupported encoding ${encoding}`));
       return;
     }
-    console.log('writing');
     const result = await this.device.transferOut(
       this.config.outEndpoint,
       chunk
     );
+
+    // console.log(`wrote ${result.status} - ${result.bytesWritten}`);
     if (result.status === 'ok') {
       callback(null);
     } else {
@@ -191,11 +194,13 @@ export class UsbConnectionStream extends Duplex {
   }
 
   override async _read(size: number) {
-    console.log('read');
     let result: USBInTransferResult;
     try {
+      // console.log(`reading size ${size}`);
       result = await this.device.transferIn(this.config.inEndpoint, size);
     } catch (e) {
+      console.log(`Failed!!!!!!!`);
+      console.log(e);
       this.destroy(
         new Error(
           'USB read error: ' + (e instanceof Error ? e.message : `${e}`)
@@ -203,14 +208,15 @@ export class UsbConnectionStream extends Duplex {
       );
       return;
     }
-    console.log(result);
     if (result.status === 'ok') {
       this.push(
         result.data ? Buffer.from(result.data.buffer) : Buffer.alloc(0)
       );
     } else {
-      this.destroy(new Error(`USB read failed with status ${result.status}`));
+      //this.destroy(new Error(`USB read failed with status ${result.status}`));
+      console.warn(`USB read failed with status ${result.status}`)
     }
+    
   }
 }
 
@@ -298,6 +304,7 @@ export class UsbSyncServer extends SyncServer {
     await connection.start();
 
     try {
+      console.log('Executing syncFn');
       await this.syncFn(connection.dlpConnection);
     } catch (e) {
       console.log(
@@ -390,35 +397,39 @@ export class UsbSyncServer extends SyncServer {
     }
 
     // 2. Get device config.
-    let connectionConfigFromInitFn: UsbConnectionConfig | null = null;
-    let connectionConfigFromUsbDeviceInfo: UsbConnectionConfig | null = null;
-    try {
-      connectionConfigFromInitFn = await this.USB_INIT_FNS[
-        deviceConfig.initType
-      ](device);
-      connectionConfigFromUsbDeviceInfo =
-        await this.getConnectionConfigFromUsbDeviceInfo(device);
-    } catch (e) {
-      console.log(`Could not identify connection configuration: ${e}`);
-      return {device, stream: null};
-    }
-    if (
-      connectionConfigFromInitFn &&
-      connectionConfigFromUsbDeviceInfo //&&
-      //!isEqual(connectionConfigFromInitFn, connectionConfigFromUsbDeviceInfo)
-    ) {
-      console.log(
-        'Connection config from init fn and from USB device info do not match: ' +
-          JSON.stringify(connectionConfigFromInitFn) +
-          ' vs ' +
-          JSON.stringify(connectionConfigFromUsbDeviceInfo)
-      );
-    }
-    const connectionConfig =
-      connectionConfigFromInitFn || connectionConfigFromUsbDeviceInfo;
-    if (!connectionConfig) {
-      console.log('Could not identify connection configuration');
-      return {device, stream: null};
+    // let connectionConfigFromInitFn: UsbConnectionConfig | null = null;
+    // let connectionConfigFromUsbDeviceInfo: UsbConnectionConfig | null = null;
+    // try {
+    //   connectionConfigFromInitFn = await this.USB_INIT_FNS[
+    //     deviceConfig.initType
+    //   ](device);
+    //   connectionConfigFromUsbDeviceInfo =
+    //     await this.getConnectionConfigFromUsbDeviceInfo(device);
+    // } catch (e) {
+    //   console.log(`Could not identify connection configuration: ${e}`);
+    //   return {device, stream: null};
+    // }
+    // if (
+    //   connectionConfigFromInitFn &&
+    //   connectionConfigFromUsbDeviceInfo //&&
+    //   //!isEqual(connectionConfigFromInitFn, connectionConfigFromUsbDeviceInfo)
+    // ) {
+      // console.log(
+      //   'Connection config from init fn and from USB device info do not match: ' +
+      //     JSON.stringify(connectionConfigFromInitFn) +
+      //     ' vs ' +
+      //     JSON.stringify(connectionConfigFromUsbDeviceInfo)
+      // );
+    // }
+    // const connectionConfig =
+    //   connectionConfigFromInitFn || connectionConfigFromUsbDeviceInfo;
+    // if (!connectionConfig) {
+    //   console.log('Could not identify connection configuration');
+    //   return {device, stream: null};
+    // }
+    const connectionConfig: UsbConnectionConfig = {
+      inEndpoint: 6,
+      outEndpoint: 7
     }
     console.log(`Connection configuration: ${JSON.stringify(connectionConfig)}`);
 
@@ -432,6 +443,7 @@ export class UsbSyncServer extends SyncServer {
   /** Clean up a device opened by openDevice(). */
   private async closeDevice(device: USBDevice) {
     // Release interface.
+    console.log(`Closing device`);
     try {
       if (device.configuration?.interfaces[0]?.claimed) {
         await device.releaseInterface(
@@ -513,7 +525,10 @@ export class UsbSyncServer extends SyncServer {
     device: USBDevice
   ): Promise<UsbConnectionConfig | null> {
     let response: GetConnectionInfoResponse;
+    console.log(`Trying to find endpoints`);
     try {
+
+
       response = await this.sendUsbControlRequest(
         device,
         {
@@ -526,6 +541,8 @@ export class UsbSyncServer extends SyncServer {
         GetConnectionInfoResponse
       );
     } catch (e) {
+      console.log('Failed to find conn info!');
+      console.error(e);
       return null;
     }
     const portInfo = response.ports
@@ -537,6 +554,8 @@ export class UsbSyncServer extends SyncServer {
       console.log('Could not identify HotSync port in GetConnectionInfo response');
       return null;
     }
+
+    console.log(`Found endpoint ${portInfo.portNumber}`);
     return {inEndpoint: portInfo.portNumber, outEndpoint: portInfo.portNumber};
   }
 

@@ -1,6 +1,6 @@
 import debug from 'debug';
 import pEvent from 'p-event';
-import {Duplex, Readable} from 'readable-stream';
+import {Duplex, } from 'readable-stream';
 import {doCmpHandshake} from './cmp-protocol';
 import {
   DlpEndOfSyncReqType,
@@ -18,6 +18,7 @@ import {StreamRecorder} from './stream-recorder';
 import {DEFAULT_ENCODING} from 'palm-pdb';
 import {SerializeOptions, DeserializeOptions} from 'serio';
 import {DlpRequest, DlpRespErrorCode, DlpResponseType} from './dlp-protocol';
+import { Readable } from 'node:stream';
 
 /** Options for DlpConnection. */
 export interface DlpConnectionOptions {
@@ -218,29 +219,29 @@ export class NetSyncConnection extends SyncConnection<NetSyncDatagramStream> {
   }
   override async doHandshake() {
 
-    // await this.readStream(
-    //   this.dlpTransportStream,
-    //   NET_SYNC_HANDSHAKE_REQUEST_1.length
-    // );
-    await new Promise(f => setTimeout(f, 10));
+    await this.readStream(
+      this.dlpTransportStream,
+      NET_SYNC_HANDSHAKE_REQUEST_1.length
+    );
+  
     this.dlpTransportStream.write(NET_SYNC_HANDSHAKE_RESPONSE_1);
 
-    // await this.readStream(
-    //   this.dlpTransportStream,
-    //   NET_SYNC_HANDSHAKE_REQUEST_2.length
-    // );
-    await new Promise(f => setTimeout(f, 10));
+    await this.readStream(
+      this.dlpTransportStream,
+      NET_SYNC_HANDSHAKE_REQUEST_2.length
+    );
+    this.dlpTransportStream.read(NET_SYNC_HANDSHAKE_REQUEST_2.length)
+
     this.dlpTransportStream.write(NET_SYNC_HANDSHAKE_RESPONSE_2);
 
-    // await this.readStream(
-    //   this.dlpTransportStream,
-    //   NET_SYNC_HANDSHAKE_REQUEST_3.length
-    // );
-    await new Promise(f => setTimeout(f, 10));
+    await this.readStream(
+      this.dlpTransportStream,
+      NET_SYNC_HANDSHAKE_REQUEST_3.length
+    );
+
   }
   /** Utility method for reading a datagram with an optional expected size. */
-  private async readStream(stream: Duplex, expectedLength?: number) {
-
+  private async readStream(stream: Readable, expectedLength?: number) {
     const data: Buffer = await pEvent(stream, 'data');
     if (
       expectedLength &&

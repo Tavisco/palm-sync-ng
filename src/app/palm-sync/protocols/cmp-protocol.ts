@@ -129,7 +129,7 @@ export async function doCmpHandshake(
   stream: PadpStream,
   suggestedBaudRate?: number
 ) {
-  const log = debug('palm-sync').extend('cmp');
+  // const log = debug('palm-sync').extend('cmp');
 
   // Read initial WAKEUP.
   const wakeupDatagram = CmpDatagram.from(await pEvent(stream, 'data'));
@@ -139,7 +139,7 @@ export async function doCmpHandshake(
         `got ${CmpDatagramType[wakeupDatagram.type]}`
     );
   }
-  log(`<<< CMP WAKEUP: ${JSON.stringify(wakeupDatagram)}`);
+  console.log(`<<< CMP WAKEUP: ${JSON.stringify(wakeupDatagram)}`);
 
   // Send reply.
   const initDatagram = CmpDatagram.with({
@@ -152,7 +152,7 @@ export async function doCmpHandshake(
   if (suggestedBaudRate) {
     initDatagram.baudRate = suggestedBaudRate;
   }
-  log(`>>> CMP INIT: ${JSON.stringify(initDatagram)}`);
+  console.log(`>>> CMP INIT: ${JSON.stringify(initDatagram)}`);
   const ackPromise = new Promise<null>((resolve, reject) => {
     stream.setNextXid(CMP_XID);
     stream.write(
@@ -165,7 +165,7 @@ export async function doCmpHandshake(
   // Wait for ACK on our reply, and discard any other datagrams coming from the
   // client until that happens. The Palm device may send multiple CMP WAKEUP
   // datagrams before receiving our reply, so we need to ignore those.
-  log(`-- Waiting for ACK on CMP INIT`);
+  console.log(`-- Waiting for ACK on CMP INIT`);
   for (;;) {
     const dataOrAck = (await Promise.race([
       ackPromise,
@@ -176,11 +176,11 @@ export async function doCmpHandshake(
       break;
     } else {
       // Got some other message.
-      log(
+      console.log(
         `--- Ignoring PADP message until ACK on CMP INIT: ` +
           (dataOrAck as Buffer).toString('hex')
       );
     }
   }
-  log(`--- Received ACK on CMP INIT, CMP handshake complete`);
+  console.log(`--- Received ACK on CMP INIT, CMP handshake complete`);
 }
