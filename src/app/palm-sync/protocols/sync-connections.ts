@@ -1,6 +1,6 @@
 import debug from 'debug';
 import pEvent from 'p-event';
-import {Duplex, } from 'readable-stream';
+import {Duplex} from 'readable-stream';
 import {doCmpHandshake} from './cmp-protocol';
 import {
   DlpEndOfSyncReqType,

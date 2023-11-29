@@ -199,8 +199,8 @@ export class UsbConnectionStream extends Duplex {
       // console.log(`reading size ${size}`);
       result = await this.device.transferIn(this.config.inEndpoint, size);
     } catch (e) {
-      console.log(`Failed!!!!!!!`);
-      console.log(e);
+      // console.log(`Failed!!!!!!!`);
+      // console.log(e);
       this.destroy(
         new Error(
           'USB read error: ' + (e instanceof Error ? e.message : `${e}`)

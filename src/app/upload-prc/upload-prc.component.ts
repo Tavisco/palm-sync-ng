@@ -8,32 +8,7 @@ import {SyncFn, SyncServer} from '../palm-sync/sync-servers/sync-server';
 import pEvent from 'p-event';
 import { SyncConnection } from '../palm-sync/protocols/sync-connections';
 import { HANDELD_VENDORS_ID } from '../palm-sync/sync-servers/usb-device-configs';
-
-
-// interface UploadEvent {
-//   originalEvent: Event;
-//   files: File[];
-// }
-
-// async function runSyncForCommand(syncFn: SyncFn) {
-
-//   const encoding = '';
-
-//   let connectionString: string = 'usb';
-
-//   const syncConnectionOptions: SyncConnectionOptions = encoding
-//     ? {
-//         requestSerializeOptions: {encoding},
-//         responseDeserializeOptions: {encoding},
-//       }
-//     : {};
-
-//   return await createSyncServerAndRunSync(
-//     connectionString,
-//     syncFn,
-//     syncConnectionOptions
-//   );
-// }
+import { writeDbFromBuffer } from '../palm-sync/sync-utils/write-db';
 
 async function runSync(
     /** Sync function to run for new connections. */
@@ -50,6 +25,7 @@ async function runSync(
   console.log('Component: Connected!');
 
   await pEvent(syncServer, 'disconnect');
+
   console.log('Component: Disconnected');
 
   await syncServer.stop();
@@ -77,27 +53,48 @@ export class UploadPrcComponent {
     await navigator.usb.requestDevice({ filters: HANDELD_VENDORS_ID});
 
     await runSync(async (dlpConnection) => {
-      console.log('Preparing command');
-      const {dateTime: deviceDateTime} = await dlpConnection.execute(
-        DlpGetSysDateTimeReqType.with()
-      );
-      console.log('command executed!');
-      const lines: Array<[string, string]> = [
-        ['OS version', dlpConnection.sysInfo.romSWVersion.toString()],
-        ['DLP version', dlpConnection.sysInfo.dlpVer.toString()],
-        ['User name', dlpConnection.userInfo.userName],
-        ['Last sync PC', dlpConnection.userInfo.lastSyncPc.toString()],
-        ['User ID', dlpConnection.userInfo.userId.toString()],
-        ['Last sync', dlpConnection.userInfo.lastSyncDate.toLocaleString()],
-        [
-          'Last sync succ',
-          dlpConnection.userInfo.succSyncDate.toLocaleString(),
-        ],
-        ['System time', deviceDateTime.toLocaleString()],
-      ];
-      console.log(
-        lines.map(([label, value]) => `\t${label}:\t${value}`).join('\n')
-      );
+
+      const arrbuf = await files[0].arrayBuffer();
+      const buffer = Buffer.from(arrbuf);
+
+      await writeDbFromBuffer(dlpConnection, buffer, { overwrite: true });
+
+      // const reader = new FileReader();
+
+      // reader.onload = async (event) => {
+      //   if (event.target?.result) {
+      //     const arrayBuffer = event.target.result as ArrayBuffer;
+      //     const bufferFromArrayBuffer = Buffer.from(arrayBuffer);
+
+      //     // Now you can use 'bufferFromArrayBuffer' as a Buffer object
+      //     await writeDbFromBuffer(dlpConnection, bufferFromArrayBuffer, { overwrite: true });
+      //   }
+      // };
+
+      // await reader.readAsArrayBuffer(files[0]);
+
+      
+      // console.log('Preparing command');
+      // const {dateTime: deviceDateTime} = await dlpConnection.execute(
+      //   DlpGetSysDateTimeReqType.with()
+      // );
+      // console.log('command executed!');
+      // const lines: Array<[string, string]> = [
+      //   ['OS version', dlpConnection.sysInfo.romSWVersion.toString()],
+      //   ['DLP version', dlpConnection.sysInfo.dlpVer.toString()],
+      //   ['User name', dlpConnection.userInfo.userName],
+      //   ['Last sync PC', dlpConnection.userInfo.lastSyncPc.toString()],
+      //   ['User ID', dlpConnection.userInfo.userId.toString()],
+      //   ['Last sync', dlpConnection.userInfo.lastSyncDate.toLocaleString()],
+      //   [
+      //     'Last sync succ',
+      //     dlpConnection.userInfo.succSyncDate.toLocaleString(),
+      //   ],
+      //   ['System time', deviceDateTime.toLocaleString()],
+      // ];
+      // console.log(
+      //   lines.map(([label, value]) => `\t${label}:\t${value}`).join('\n')
+      // );
     });
   }
 
