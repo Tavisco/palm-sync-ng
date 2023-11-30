@@ -12,10 +12,6 @@ import {
 } from 'serio';
 import {Duplex, DuplexOptions} from 'readable-stream';
 import {
-  DlpReadDBListFlags,
-  DlpReadDBListReqType,
-} from '../protocols/dlp-commands';
-import {
   NetSyncConnection,
   SerialSyncConnection,
   SyncConnection,
@@ -27,8 +23,8 @@ import {
   UsbDeviceConfig,
   UsbInitType,
   UsbProtocolStackType,
-} from 'palm-sync/dist/sync-servers/usb-device-configs';
-import { USB_DEVICE_CONFIGS, toUsbId } from './usb-device-configs';
+  toUsbId
+} from './usb-device-configs';
 
 /** Vendor USB control requests supported by Palm OS devices. */
 enum UsbControlRequestType {
