@@ -1,4 +1,3 @@
-import debug from 'debug';
 import {
   bitfield,
   DeserializeOptions,
@@ -558,8 +557,6 @@ export class PadpStream extends Duplex {
     this.nextXid = (this.nextXid + 1) % 0xff || 1;
     return xid;
   }
-
-  private log = debug('palm-sync').extend('padp');
 
   /** Underlying SLP datagram stream. */
   private slpDatagramStream: SlpDatagramStream;

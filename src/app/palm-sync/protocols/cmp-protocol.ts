@@ -1,4 +1,3 @@
-import debug from 'debug';
 import pEvent from 'p-event';
 import {
   bitfield,
@@ -129,7 +128,6 @@ export async function doCmpHandshake(
   stream: PadpStream,
   suggestedBaudRate?: number
 ) {
-  // const log = debug('palm-sync').extend('cmp');
 
   // Read initial WAKEUP.
   const wakeupDatagram = CmpDatagram.from(await pEvent(stream, 'data'));

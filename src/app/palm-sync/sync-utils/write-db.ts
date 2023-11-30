@@ -9,7 +9,6 @@
  * @module
  */
 
-import debug from 'debug';
 import {
   DatabaseHdrType,
   RawPdbDatabase,
@@ -153,8 +152,9 @@ export async function writeRawDb(
     if (!(db instanceof RawPrcDatabase)) {
       throw new Error('Expected PRC database');
     }
+    console.log(`Writing records`);
     for (let i = 0; i < db.records.length; i++) {
-      console.log(`Writing resource ${i + 1} of ${db.records.length}`);
+      //console.log(`Writing resource ${i + 1} of ${db.records.length}`);
       const record = db.records[i];
       await dlpConnection.execute(
         createWriteResourceReqFromRawPrcRecord(dbId, record)
@@ -169,7 +169,7 @@ export async function writeRawDb(
       throw new Error('Expected PDB database');
     }
     for (let i = 0; i < db.records.length; i++) {
-      console.log(`Writing record ${i + 1} of ${db.records.length}`);
+      //console.log(`Writing record ${i + 1} of ${db.records.length}`);
       const record = db.records[i];
       await dlpConnection.execute(
         createWriteRecordReqFromRawPdbRecord(dbId, record)

@@ -1,4 +1,3 @@
-import debug from 'debug';
 import * as duplexify from 'duplexify';
 import {
   DeserializeOptions,
@@ -311,7 +310,7 @@ export class SlpSeekReadStream extends Transform {
       return;
     }
 
-    this.log(`<<< ${chunk.toString('hex')}`);
+    console.log(`<<< ${chunk.toString('hex')}`);
 
     // Merge the chunk with the potential partial signature from the previous chunk.
     const mergedChunk = Buffer.concat([
@@ -327,7 +326,7 @@ export class SlpSeekReadStream extends Transform {
     );
     if (slpSignatureIdx >= 0) {
       const skippedLength = this.previousChunksLength + slpSignatureIdx;
-      this.log(`--- Found SLP signature after skipping ${skippedLength} bytes`);
+      console.log(`--- Found SLP signature after skipping ${skippedLength} bytes`);
       this.hasFoundSlpSignature = true;
       return;
     }
@@ -360,14 +359,12 @@ export class SlpSeekReadStream extends Transform {
     }
     const lengthSkipped =
       chunk.length - this.partialSignatureFromPreviousChunk.length;
-    this.log(
+    console.log(
       `--- Skipping ${lengthSkipped} bytes ` +
         `(${this.previousChunksLength} total)`
     );
   }
 
-  /** Debugger. */
-  private log = debug('palm-sync').extend('slp');
   /** Whether we've already found the SLP signature. */
   private hasFoundSlpSignature = false;
   /** Data read in previous chunks that may be part of the SLP signature. */

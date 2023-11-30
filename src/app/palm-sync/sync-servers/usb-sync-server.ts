@@ -1,4 +1,3 @@
-import debug from 'debug';
 import {TypeId} from 'palm-pdb';
 import {
   SArray,
@@ -436,7 +435,7 @@ export class UsbSyncServer extends SyncServer {
     // 3. Create stream.
     return {
       device,
-      stream: new UsbConnectionStream(device, connectionConfig, this.log),
+      stream: new UsbConnectionStream(device, connectionConfig),
     };
   }
 
@@ -717,7 +716,6 @@ export class UsbSyncServer extends SyncServer {
     [UsbProtocolStackType.SERIAL]: SerialSyncConnection,
   };
 
-  private log = debug('palm-sync').extend('usb');
   /** Promise returned by the currently running run() function. */
   private runPromise: Promise<void> | null = null;
   /** Flag indicating that stop() has been invoked. */

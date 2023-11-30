@@ -39,8 +39,6 @@ async function runSync(
 })
 export class UploadPrcComponent {
 
-
-
   async customUpload(event: any) {
     // Access the files from the event
     const files: File[] = event.files;
@@ -58,43 +56,6 @@ export class UploadPrcComponent {
       const buffer = Buffer.from(arrbuf);
 
       await writeDbFromBuffer(dlpConnection, buffer, { overwrite: true });
-
-      // const reader = new FileReader();
-
-      // reader.onload = async (event) => {
-      //   if (event.target?.result) {
-      //     const arrayBuffer = event.target.result as ArrayBuffer;
-      //     const bufferFromArrayBuffer = Buffer.from(arrayBuffer);
-
-      //     // Now you can use 'bufferFromArrayBuffer' as a Buffer object
-      //     await writeDbFromBuffer(dlpConnection, bufferFromArrayBuffer, { overwrite: true });
-      //   }
-      // };
-
-      // await reader.readAsArrayBuffer(files[0]);
-
-      
-      // console.log('Preparing command');
-      // const {dateTime: deviceDateTime} = await dlpConnection.execute(
-      //   DlpGetSysDateTimeReqType.with()
-      // );
-      // console.log('command executed!');
-      // const lines: Array<[string, string]> = [
-      //   ['OS version', dlpConnection.sysInfo.romSWVersion.toString()],
-      //   ['DLP version', dlpConnection.sysInfo.dlpVer.toString()],
-      //   ['User name', dlpConnection.userInfo.userName],
-      //   ['Last sync PC', dlpConnection.userInfo.lastSyncPc.toString()],
-      //   ['User ID', dlpConnection.userInfo.userId.toString()],
-      //   ['Last sync', dlpConnection.userInfo.lastSyncDate.toLocaleString()],
-      //   [
-      //     'Last sync succ',
-      //     dlpConnection.userInfo.succSyncDate.toLocaleString(),
-      //   ],
-      //   ['System time', deviceDateTime.toLocaleString()],
-      // ];
-      // console.log(
-      //   lines.map(([label, value]) => `\t${label}:\t${value}`).join('\n')
-      // );
     });
   }
 

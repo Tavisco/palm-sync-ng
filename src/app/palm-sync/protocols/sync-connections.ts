@@ -1,4 +1,4 @@
-import debug from 'debug';
+
 import pEvent from 'p-event';
 import {Duplex} from 'readable-stream';
 import {doCmpHandshake} from './cmp-protocol';
@@ -59,17 +59,17 @@ export class DlpConnection {
       encoding: DEFAULT_ENCODING,
       ...this.opts.requestSerializeOptions,
     });
-    console.log(
-      `Request >>> ${request.constructor.name} ${requestBuffer.toString('hex')}\n` +
-        `    ${JSON.stringify(request.toJSON())}`
-    );
+    // console.log(
+    //   `Request >>> ${request.constructor.name} ${requestBuffer.toString('hex')}\n` +
+    //     `    ${JSON.stringify(request.toJSON())}`
+    // );
 
     this.transport.write(requestBuffer);
     const responseBuffer = (await pEvent(this.transport, 'data')) as Buffer;
 
-    console.log(
-      `Response <<< ${request.responseType.name} ${responseBuffer.toString('hex')}`
-    );
+    // console.log(
+    //   `Response <<< ${request.responseType.name} ${responseBuffer.toString('hex')}`
+    // );
     const response: DlpResponseType<DlpRequestT> = new request.responseType();
     try {
       response.deserialize(responseBuffer, {
@@ -82,7 +82,7 @@ export class DlpConnection {
     }
 
     if (response.errorCode === DlpRespErrorCode.NONE) {
-      console.log(`    ${JSON.stringify(response.toJSON())}`);
+      //console.log(`    ${JSON.stringify(response.toJSON())}`);
     } else {
       const errorMessage =
         request.responseType.name +
@@ -103,8 +103,6 @@ export class DlpConnection {
 
     return response;
   }
-
-  private log = debug('palm-sync').extend('dlp');
 
   /** System information about the Palm OS device.
    *
