@@ -47,20 +47,20 @@ export interface WriteDbOptions {
   overwrite?: boolean;
 }
 
-/** Serialize and install a database to a Palm OS device. */
-export async function writeDb<DatabaseT extends Serializable>(
-  dlpConnection: DlpConnection,
-  /** Database to write.
-   *
-   * This should typically be a subclass of Database from the palm-pdb package.
-   * But we're keeping the signature generic here as that is not a hard
-   * requirement.
-   */
-  db: DatabaseT,
-  opts: WriteDbOptions & SerializeOptions = {}
-): Promise<void> {
-  return await writeDbFromBuffer(dlpConnection, db.serialize(opts), opts);
-}
+// /** Serialize and install a database to a Palm OS device. */
+// export async function writeDb<DatabaseT extends Serializable>(
+//   dlpConnection: DlpConnection,
+//   /** Database to write.
+//    *
+//    * This should typically be a subclass of Database from the palm-pdb package.
+//    * But we're keeping the signature generic here as that is not a hard
+//    * requirement.
+//    */
+//   db: DatabaseT,
+//   opts: WriteDbOptions & SerializeOptions = {}
+// ): Promise<void> {
+//   return await writeDbFromBuffer(dlpConnection, db.serialize(opts), opts);
+// }
 
 /** Install a PDB / PRC file to a Palm OS device. */
 // export async function writeDbFromFile(

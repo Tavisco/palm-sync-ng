@@ -39,6 +39,8 @@ async function runSync(
 })
 export class UploadPrcComponent {
 
+  statusLabel: String = 'Ready';
+
   async customUpload(event: any) {
     // Access the files from the event
     const files: File[] = event.files;
@@ -48,15 +50,19 @@ export class UploadPrcComponent {
       console.log(`File Name: ${file.name}, Size: ${this.formatBytes(file.size)}`);
     });
 
-    await navigator.usb.requestDevice({ filters: HANDELD_VENDORS_ID});
+    this.statusLabel = 'Press the hotsync button and select your device';
+    await navigator.usb.requestDevice({ filters: HANDELD_VENDORS_ID });
 
+    this.statusLabel = 'Starting sync...';
     await runSync(async (dlpConnection) => {
-
+      this.statusLabel = 'Sync in progress...';
       const arrbuf = await files[0].arrayBuffer();
       const buffer = Buffer.from(arrbuf);
 
       await writeDbFromBuffer(dlpConnection, buffer, { overwrite: true });
     });
+
+    this.statusLabel = 'Sync finished!';
   }
 
   // Helper function to format bytes into human-readable sizes

@@ -256,7 +256,7 @@ export class UsbSyncServer extends SyncServer {
 
       try {
         const {device, stream} = await this.openDevice(rawDevice, deviceConfig);
-        console.log(`connection opened successfully`)
+        console.log(`connection opened successfully`);
         if (stream) {
           await this.onConnection(stream, protocolStackType);
         }
@@ -273,6 +273,8 @@ export class UsbSyncServer extends SyncServer {
       try {
         await this.waitForDeviceToDisconnect(rawDevice);
       } catch (e) {}
+
+      console.log('Device disconnected');
     }
   }
 
@@ -286,13 +288,10 @@ export class UsbSyncServer extends SyncServer {
     rawStream: Duplex,
     protocolStackType: UsbProtocolStackType = UsbProtocolStackType.NET_SYNC
   ) {
-    console.log('selecting stack ');
     const connection = new this.USB_PROTOCOL_STACKS[protocolStackType](
       rawStream,
       this.opts
     );
-
-    console.log('emitting connect');
 
     this.emit('connect', connection);
 
@@ -310,6 +309,7 @@ export class UsbSyncServer extends SyncServer {
         'Sync error: ' + (e instanceof Error ? e.stack || e.message : `${e}`)
       );
     }
+    console.log('syncFn finished executing. Closing connection.');
 
     await connection.end();
     this.emit('disconnect', connection);
@@ -397,39 +397,39 @@ export class UsbSyncServer extends SyncServer {
 
     // 2. Get device config.
     // let connectionConfigFromInitFn: UsbConnectionConfig | null = null;
-    // let connectionConfigFromUsbDeviceInfo: UsbConnectionConfig | null = null;
-    // try {
-    //   connectionConfigFromInitFn = await this.USB_INIT_FNS[
-    //     deviceConfig.initType
-    //   ](device);
-    //   connectionConfigFromUsbDeviceInfo =
-    //     await this.getConnectionConfigFromUsbDeviceInfo(device);
-    // } catch (e) {
-    //   console.log(`Could not identify connection configuration: ${e}`);
-    //   return {device, stream: null};
-    // }
-    // if (
-    //   connectionConfigFromInitFn &&
-    //   connectionConfigFromUsbDeviceInfo //&&
-    //   //!isEqual(connectionConfigFromInitFn, connectionConfigFromUsbDeviceInfo)
-    // ) {
+    let connectionConfigFromUsbDeviceInfo: UsbConnectionConfig | null = null;
+    try {
+      // connectionConfigFromInitFn = await this.USB_INIT_FNS[
+      //   deviceConfig.initType
+      // ](device);
+      connectionConfigFromUsbDeviceInfo =
+        await this.getConnectionConfigFromUsbDeviceInfo(device);
+    } catch (e) {
+      console.error(`Exception during connection configuration: ${e}`);
+      return {device, stream: null};
+    }
+    //if (
+      // connectionConfigFromInitFn &&
+      // connectionConfigFromUsbDeviceInfo //&&
+      //!isEqual(connectionConfigFromInitFn, connectionConfigFromUsbDeviceInfo)
+    //) {
       // console.log(
       //   'Connection config from init fn and from USB device info do not match: ' +
       //     JSON.stringify(connectionConfigFromInitFn) +
       //     ' vs ' +
       //     JSON.stringify(connectionConfigFromUsbDeviceInfo)
       // );
-    // }
+    //}
     // const connectionConfig =
     //   connectionConfigFromInitFn || connectionConfigFromUsbDeviceInfo;
-    // if (!connectionConfig) {
-    //   console.log('Could not identify connection configuration');
-    //   return {device, stream: null};
-    // }
-    const connectionConfig: UsbConnectionConfig = {
-      inEndpoint: 6,
-      outEndpoint: 7
+
+    const connectionConfig = connectionConfigFromUsbDeviceInfo;
+
+    if (!connectionConfig) {
+      console.error('Could not identify connection configuration');
+      return {device, stream: null};
     }
+
     console.log(`Connection configuration: ${JSON.stringify(connectionConfig)}`);
 
     // 3. Create stream.
@@ -442,7 +442,7 @@ export class UsbSyncServer extends SyncServer {
   /** Clean up a device opened by openDevice(). */
   private async closeDevice(device: USBDevice) {
     // Release interface.
-    console.log(`Closing device`);
+    //console.log(`Closing device`);
     try {
       if (device.configuration?.interfaces[0]?.claimed) {
         await device.releaseInterface(
@@ -526,8 +526,6 @@ export class UsbSyncServer extends SyncServer {
     let response: GetConnectionInfoResponse;
     console.log(`Trying to find endpoints`);
     try {
-
-
       response = await this.sendUsbControlRequest(
         device,
         {
@@ -575,6 +573,7 @@ export class UsbSyncServer extends SyncServer {
         GetExtConnectionInfoResponse
       );
     } catch (e) {
+      console.log(e);
       return null;
     }
     const portInfo = response.ports
@@ -616,12 +615,13 @@ export class UsbSyncServer extends SyncServer {
     const validEndpoints = alternate.endpoints.filter(
       ({type, packetSize}) => type === 'bulk' && packetSize === 0x40
     );
-    const inEndpoint = validEndpoints.find(
+    const inEndpoint = validEndpoints.findLast(
       (endpoint) => endpoint.direction === 'in'
     );
-    const outEndpoint = validEndpoints.find(
+    const outEndpoint = validEndpoints.findLast(
       (endpoint) => endpoint.direction === 'out'
     );
+
     if (!inEndpoint || !outEndpoint) {
       console.log(
         'Could not find HotSync endpoints in USB device interface: ' +
@@ -684,7 +684,7 @@ export class UsbSyncServer extends SyncServer {
       //   {
       //     requestType: 'standard',
       //     recipient: 'device',
-      //     request: usb.LIBUSB_REQUEST_GET_CONFIGURATION,
+      //     request: UsbControlRequestType.LIBUSB_REQUEST_GET_CONFIGURATION,
       //     index: 0,
       //     value: 0,
       //   },
@@ -695,7 +695,7 @@ export class UsbSyncServer extends SyncServer {
       //   {
       //     requestType: 'standard',
       //     recipient: 'device',
-      //     request: usb.LIBUSB_REQUEST_GET_INTERFACE,
+      //     request: UsbControlRequestType.LIBUSB_REQUEST_GET_INTERFACE,
       //     index: 0,
       //     value: 0,
       //   },
@@ -722,20 +722,20 @@ export class UsbSyncServer extends SyncServer {
   private shouldStop = false;
 }
 
-if (require.main === module) {
-  (async () => {
-    const syncServer = new UsbSyncServer(async (dlpConnection) => {
-      const readDbListResp = await dlpConnection.execute(
-        DlpReadDBListReqType.with({
-          srchFlags: DlpReadDBListFlags.with({ram: true, multiple: true}),
-        })
-      );
-      console.log(readDbListResp.dbInfo.map(({name}) => name).join('\n'));
-    });
-    syncServer.start();
-  })();
-}
-function isEqual(connectionConfigFromInitFn: UsbConnectionConfig, connectionConfigFromUsbDeviceInfo: UsbConnectionConfig) {
-  throw new Error('Function not implemented.');
-}
+// if (require.main === module) {
+//   (async () => {
+//     const syncServer = new UsbSyncServer(async (dlpConnection) => {
+//       const readDbListResp = await dlpConnection.execute(
+//         DlpReadDBListReqType.with({
+//           srchFlags: DlpReadDBListFlags.with({ram: true, multiple: true}),
+//         })
+//       );
+//       console.log(readDbListResp.dbInfo.map(({name}) => name).join('\n'));
+//     });
+//     syncServer.start();
+//   })();
+// }
+// function isEqual(connectionConfigFromInitFn: UsbConnectionConfig, connectionConfigFromUsbDeviceInfo: UsbConnectionConfig) {
+//   throw new Error('Function not implemented.');
+// }
 
