@@ -40,7 +40,9 @@
     "stream-browserify": "^3.0.0",
     "tslib": "^2.3.0",
     "util": "^0.12.5",
-    "zone.js": "~0.13.0"
+    "zone.js": "~0.13.0",
+    "p-event": "^4.2.0",
+    "palm-pdb": "^0.1.3"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^16.2.10",
