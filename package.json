@@ -42,7 +42,8 @@
     "util": "^0.12.5",
     "zone.js": "~0.13.0",
     "p-event": "^4.2.0",
-    "palm-pdb": "^0.1.3"
+    "palm-pdb": "^0.1.3",
+    "duplexify": "^4.1.2"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^16.2.10",
