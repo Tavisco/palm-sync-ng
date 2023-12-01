@@ -25,6 +25,7 @@ import {
   UsbProtocolStackType,
   toUsbId
 } from './usb-device-configs';
+import { BehaviorSubject } from 'rxjs';
 
 /** Vendor USB control requests supported by Palm OS devices. */
 enum UsbControlRequestType {
@@ -152,6 +153,11 @@ export interface UsbConnectionConfig {
   outEndpoint: number;
 }
 
+function log(statusLabel: BehaviorSubject<string>, msg: string) {
+  console.log(msg);
+  statusLabel.next(msg);
+}
+
 /** Duplex stream for HotSync with an initialized USB device. */
 export class UsbConnectionStream extends Duplex {
   constructor(
@@ -219,11 +225,11 @@ export class UsbConnectionStream extends Duplex {
 const USB_DEVICE_POLLING_INTERVAL_MS = 200;
 
 export class UsbSyncServer extends SyncServer {
-  override start() {
+  override start(statusLabel: BehaviorSubject<string>) {
     if (this.runPromise) {
       throw new Error('Server already started');
     }
-    this.runPromise = this.run();
+    this.runPromise = this.run(statusLabel);
   }
 
   override async stop() {
@@ -238,9 +244,9 @@ export class UsbSyncServer extends SyncServer {
     this.shouldStop = false;
   }
 
-  private async run() {
+  private async run(statusLabel: BehaviorSubject<string>) {
     while (!this.shouldStop) {
-      console.log('Waiting for device...');
+      log(statusLabel, 'Waiting for device...');
       const deviceResult = await this.waitForDevice();
       if (!deviceResult) {
         break;
@@ -248,29 +254,29 @@ export class UsbSyncServer extends SyncServer {
 
       const {rawDevice, deviceConfig} = deviceResult;
       const {usbId, label, protocolStackType} = deviceConfig;
-      console.log(`Found device ${usbId} - ${label}`);
+      log(statusLabel, `Found device ${usbId} - ${label}`);
 
       try {
         const {device, stream} = await this.openDevice(rawDevice, deviceConfig);
-        console.log(`connection opened successfully`);
+        log(statusLabel, `Connection opened successfully`);
         if (stream) {
-          await this.onConnection(stream, protocolStackType);
+          await this.onConnection(statusLabel, stream, protocolStackType);
         }
         if (device) {
-          console.log('Closing device');
+          log(statusLabel, 'Closing device');
           await this.closeDevice(device);
         }
       } catch (e) {
-        console.log('Error syncing with device');
+        log(statusLabel, 'Error syncing with device');
         console.log(e);
       }
 
-      console.log('Waiting for device to disconnect');
+      log(statusLabel, 'Waiting for device to disconnect');
       try {
         await this.waitForDeviceToDisconnect(rawDevice);
       } catch (e) {}
 
-      console.log('Device disconnected');
+      log(statusLabel, 'Device disconnected');
     }
   }
 
@@ -281,6 +287,7 @@ export class UsbSyncServer extends SyncServer {
    * @ignore
    */
   public async onConnection(
+    statusLabel: BehaviorSubject<string>,
     rawStream: Duplex,
     protocolStackType: UsbProtocolStackType = UsbProtocolStackType.NET_SYNC
   ) {
@@ -291,21 +298,24 @@ export class UsbSyncServer extends SyncServer {
 
     this.emit('connect', connection);
 
-    console.log('Starting handshake');
+    log(statusLabel, 'Starting handshake');
+    statusLabel.next('Starting handshake');
     await connection.doHandshake();
-    console.log('Handshake complete');
+    log(statusLabel, 'Handshake complete');
+    statusLabel.next('Handshake complete');
 
     await connection.start();
 
     try {
-      console.log('Executing syncFn');
+      log(statusLabel, 'Executing syncFn');
       await this.syncFn(connection.dlpConnection);
     } catch (e) {
-      console.log(
+      log(statusLabel, 
         'Sync error: ' + (e instanceof Error ? e.stack || e.message : `${e}`)
       );
     }
-    console.log('syncFn finished executing. Closing connection.');
+    log(statusLabel, 'syncFn finished executing. Closing connection.');
+    statusLabel.next('Command finished executing. Closing connection.');
 
     await connection.end();
     this.emit('disconnect', connection);

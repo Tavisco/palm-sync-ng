@@ -4,6 +4,7 @@ import {
   SyncConnection,
   SyncConnectionOptions,
 } from '../protocols/sync-connections';
+import { BehaviorSubject } from 'rxjs';
 
 /** A function that implements HotSync business logic. */
 export type SyncFn = (connection: DlpConnection) => Promise<void>;
@@ -26,7 +27,7 @@ export abstract class SyncServer extends EventEmitter {
   }
 
   /** Start listening for HotSync connections. */
-  abstract start(): void;
+  abstract start(statusLabel: BehaviorSubject<string>): void;
 
   /** Stop listening for HotSync connections.
    *

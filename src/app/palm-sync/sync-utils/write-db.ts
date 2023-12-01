@@ -32,6 +32,7 @@ import {
 } from '../protocols/dlp-commands';
 import {DlpRespErrorCode} from '../protocols/dlp-protocol';
 import {DlpConnection} from '../protocols/sync-connections';
+import { BehaviorSubject } from 'rxjs';
 
 /** Options to {@link readDb} and {@link readRawDb}. */
 export interface WriteDbOptions {
@@ -77,7 +78,13 @@ export interface WriteDbOptions {
 //   );
 // }
 
+function log(statusLabel: BehaviorSubject<string>, msg: string) {
+  console.log(msg);
+  statusLabel.next(msg);
+}
+
 export async function writeDbFromBuffer(
+  statusLabel: BehaviorSubject<string>,
   dlpConnection: DlpConnection,
   buffer: Buffer,
   opts: WriteDbOptions = {}
@@ -86,17 +93,18 @@ export async function writeDbFromBuffer(
   const rawDb = header.attributes.resDB
     ? RawPrcDatabase.from(buffer)
     : RawPdbDatabase.from(buffer);
-  return writeRawDb(dlpConnection, rawDb, opts);
+  return writeRawDb(statusLabel, dlpConnection, rawDb, opts);
 }
 
 /** Install a database to a Palm OS device. */
 export async function writeRawDb(
+  statusLabel: BehaviorSubject<string>,
   dlpConnection: DlpConnection,
   /** Database to write. */
   db: RawPdbDatabase | RawPrcDatabase,
   {cardNo = 0, overwrite}: WriteDbOptions = {}
 ): Promise<void> {
-  console.log(`Writing database ${db.header.name} to card ${cardNo}`);
+  log(statusLabel, `Writing database ${db.header.name} to card ${cardNo}`);
   await dlpConnection.execute(DlpOpenConduitReqType.with());
 
   // TODO: pilot-link's pi_file_install() function checks the size of records,
@@ -111,7 +119,7 @@ export async function writeRawDb(
 
   // 1. If we intend to overwrite, delete the database if it already exists.
   if (overwrite) {
-    console.log(`Deleting existing database`);
+    log(statusLabel, `Deleting existing database`);
     await dlpConnection.execute(
       DlpDeleteDBReqType.with({cardNo, name: db.header.name}),
       {ignoreErrorCode: DlpRespErrorCode.NOT_FOUND}
@@ -119,7 +127,8 @@ export async function writeRawDb(
   }
 
   // 2. Create the database.
-  console.log(`Creating database`);
+  log(statusLabel, `Creating database`);
+  statusLabel.next(`Creating database`);
   const {dbId} = await dlpConnection.execute(
     DlpCreateDBReqType.with({
       creator: db.header.creator,
@@ -133,7 +142,7 @@ export async function writeRawDb(
 
   // 3. Write AppInfo block.
   if (db.appInfo && db.appInfo.getSerializedLength()) {
-    console.log(`Writing AppInfo block`);
+    log(statusLabel, `Writing AppInfo block`);
     await dlpConnection.execute(
       DlpWriteAppBlockReqType.with({dbId, data: db.appInfo.value})
     );
@@ -141,7 +150,7 @@ export async function writeRawDb(
 
   // 4. Write SortInfo block.
   if (db.sortInfo && db.sortInfo.getSerializedLength()) {
-    console.log(`Writing SortInfo block`);
+    log(statusLabel, `Writing SortInfo block`);
     await dlpConnection.execute(
       DlpWriteSortBlockReqType.with({dbId, data: db.sortInfo.value})
     );
@@ -152,9 +161,10 @@ export async function writeRawDb(
     if (!(db instanceof RawPrcDatabase)) {
       throw new Error('Expected PRC database');
     }
-    console.log(`Writing records`);
+    log(statusLabel, `Writing records`);
     for (let i = 0; i < db.records.length; i++) {
-      //console.log(`Writing resource ${i + 1} of ${db.records.length}`);
+      //log(statusLabel, );
+      statusLabel.next(`Writing resource ${i + 1} of ${db.records.length}`);
       const record = db.records[i];
       await dlpConnection.execute(
         createWriteResourceReqFromRawPrcRecord(dbId, record)
@@ -169,7 +179,7 @@ export async function writeRawDb(
       throw new Error('Expected PDB database');
     }
     for (let i = 0; i < db.records.length; i++) {
-      //console.log(`Writing record ${i + 1} of ${db.records.length}`);
+      //log(statusLabel, `Writing record ${i + 1} of ${db.records.length}`);
       const record = db.records[i];
       await dlpConnection.execute(
         createWriteRecordReqFromRawPdbRecord(dbId, record)
@@ -179,10 +189,10 @@ export async function writeRawDb(
 
   // 6. Close the database.
   if (shouldReset) {
-    console.log(`Resetting device`);
+    log(statusLabel, `Resetting device`);
     await dlpConnection.execute(DlpResetSystemReqType.with());
   }
-  console.log('Closing database');
+  log(statusLabel, 'Closing database');
   await dlpConnection.execute(DlpCloseDBReqType.with({dbId}));
 }
 

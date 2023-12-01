@@ -2,15 +2,16 @@ import { Component } from '@angular/core';
 
 import { UsbSyncServer } from '../palm-sync/sync-servers/usb-sync-server';
 
-import {DlpGetSysDateTimeReqType} from '../palm-sync/protocols/dlp-commands';
 import {SyncConnectionOptions} from '../palm-sync/protocols/sync-connections';
 import {SyncFn, SyncServer} from '../palm-sync/sync-servers/sync-server';
 import pEvent from 'p-event';
 import { SyncConnection } from '../palm-sync/protocols/sync-connections';
 import { HANDELD_VENDORS_ID } from '../palm-sync/sync-servers/usb-device-configs';
 import { writeDbFromBuffer } from '../palm-sync/sync-utils/write-db';
+import { BehaviorSubject } from 'rxjs';
 
 async function runSync(
+    statusLabel: BehaviorSubject<string>,
     /** Sync function to run for new connections. */
     syncFn: SyncFn,
     /** Additional options for the sync connection. */
@@ -18,7 +19,7 @@ async function runSync(
 ) {
   var syncServer: SyncServer = new UsbSyncServer(syncFn, opts);
 
-  syncServer.start();
+  syncServer.start(statusLabel);
 
   console.log('Component: Waiting for connection...');
   const connection: SyncConnection = await pEvent(syncServer, 'connect');
@@ -39,7 +40,7 @@ async function runSync(
 })
 export class UploadPrcComponent {
 
-  statusLabel: String = 'Ready';
+  statusLabel = new BehaviorSubject<string>('Ready');
 
   async customUpload(event: any) {
     // Access the files from the event
@@ -50,19 +51,19 @@ export class UploadPrcComponent {
       console.log(`File Name: ${file.name}, Size: ${this.formatBytes(file.size)}`);
     });
 
-    this.statusLabel = 'Press the hotsync button and select your device';
+    this.statusLabel.next('Press the hotsync button and select your device');
     await navigator.usb.requestDevice({ filters: HANDELD_VENDORS_ID });
 
-    this.statusLabel = 'Starting sync...';
-    await runSync(async (dlpConnection) => {
-      this.statusLabel = 'Sync in progress...';
+    this.statusLabel.next('Starting sync...');
+    await runSync(this.statusLabel, async (dlpConnection) => {
+      this.statusLabel.next('Sync in progress...');
       const arrbuf = await files[0].arrayBuffer();
       const buffer = Buffer.from(arrbuf);
 
-      await writeDbFromBuffer(dlpConnection, buffer, { overwrite: true });
+      await writeDbFromBuffer(this.statusLabel, dlpConnection, buffer, { overwrite: true });
     });
 
-    this.statusLabel = 'Sync finished!';
+    this.statusLabel.next('Sync finished!');
   }
 
   // Helper function to format bytes into human-readable sizes
