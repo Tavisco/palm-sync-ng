@@ -26,6 +26,7 @@ import {
   toUsbId
 } from './usb-device-configs';
 import { BehaviorSubject } from 'rxjs';
+import { isEqual } from 'lodash';
 
 /** Vendor USB control requests supported by Palm OS devices. */
 enum UsbControlRequestType {
@@ -401,35 +402,35 @@ export class UsbSyncServer extends SyncServer {
       return {device, stream: null};
     }
 
+    console.log(`Claimed interface ${interfaceNumber}`);
+
     // 2. Get device config.
-    // let connectionConfigFromInitFn: UsbConnectionConfig | null = null;
+    let connectionConfigFromInitFn: UsbConnectionConfig | null = null;
     let connectionConfigFromUsbDeviceInfo: UsbConnectionConfig | null = null;
     try {
-      // connectionConfigFromInitFn = await this.USB_INIT_FNS[
-      //   deviceConfig.initType
-      // ](device);
+      connectionConfigFromInitFn = await this.USB_INIT_FNS[
+        deviceConfig.initType
+      ](device);
       connectionConfigFromUsbDeviceInfo =
         await this.getConnectionConfigFromUsbDeviceInfo(device);
     } catch (e) {
       console.error(`Exception during connection configuration: ${e}`);
       return {device, stream: null};
     }
-    //if (
-      // connectionConfigFromInitFn &&
-      // connectionConfigFromUsbDeviceInfo //&&
-      //!isEqual(connectionConfigFromInitFn, connectionConfigFromUsbDeviceInfo)
-    //) {
-      // console.log(
-      //   'Connection config from init fn and from USB device info do not match: ' +
-      //     JSON.stringify(connectionConfigFromInitFn) +
-      //     ' vs ' +
-      //     JSON.stringify(connectionConfigFromUsbDeviceInfo)
-      // );
-    //}
-    // const connectionConfig =
-    //   connectionConfigFromInitFn || connectionConfigFromUsbDeviceInfo;
-
-    const connectionConfig = connectionConfigFromUsbDeviceInfo;
+    if (
+      connectionConfigFromInitFn &&
+      connectionConfigFromUsbDeviceInfo &&
+      !isEqual(connectionConfigFromInitFn, connectionConfigFromUsbDeviceInfo)
+    ) {
+      console.log(
+        'Connection config from init fn and from USB device info do not match: ' +
+          JSON.stringify(connectionConfigFromInitFn) +
+          ' vs ' +
+          JSON.stringify(connectionConfigFromUsbDeviceInfo)
+      );
+    }
+    const connectionConfig =
+      connectionConfigFromInitFn || connectionConfigFromUsbDeviceInfo;
 
     if (!connectionConfig) {
       console.error('Could not identify connection configuration');
@@ -538,7 +539,7 @@ export class UsbSyncServer extends SyncServer {
           requestType: 'vendor',
           recipient: 'endpoint',
           request: UsbControlRequestType.GET_CONNECTION_INFO,
-          index: 0,
+          index: 2,
           value: 0,
         },
         GetConnectionInfoResponse
@@ -573,7 +574,7 @@ export class UsbSyncServer extends SyncServer {
           requestType: 'vendor',
           recipient: 'endpoint',
           request: UsbControlRequestType.GET_EXT_CONNECTION_INFO,
-          index: 0,
+          index: 2,
           value: 0,
         },
         GetExtConnectionInfoResponse
@@ -672,7 +673,7 @@ export class UsbSyncServer extends SyncServer {
             requestType: 'vendor',
             recipient: 'endpoint',
             request: UsbControlRequestType.GET_NUM_BYTES_AVAILABLE,
-            index: 0,
+            index: 2,
             value: 0,
           },
           GetNumBytesAvailableResponse
@@ -727,21 +728,3 @@ export class UsbSyncServer extends SyncServer {
   /** Flag indicating that stop() has been invoked. */
   private shouldStop = false;
 }
-
-// if (require.main === module) {
-//   (async () => {
-//     const syncServer = new UsbSyncServer(async (dlpConnection) => {
-//       const readDbListResp = await dlpConnection.execute(
-//         DlpReadDBListReqType.with({
-//           srchFlags: DlpReadDBListFlags.with({ram: true, multiple: true}),
-//         })
-//       );
-//       console.log(readDbListResp.dbInfo.map(({name}) => name).join('\n'));
-//     });
-//     syncServer.start();
-//   })();
-// }
-// function isEqual(connectionConfigFromInitFn: UsbConnectionConfig, connectionConfigFromUsbDeviceInfo: UsbConnectionConfig) {
-//   throw new Error('Function not implemented.');
-// }
-
