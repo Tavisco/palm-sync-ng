@@ -41,6 +41,19 @@ async function runSync(
 export class UploadPrcComponent {
 
   statusLabel = new BehaviorSubject<string>('Ready');
+  isWebUsbSupported = false;
+  
+  ngOnInit(): void {
+    this.webUsbSupportCheck();
+  }
+
+  webUsbSupportCheck() {
+    this.isWebUsbSupported = 'usb' in navigator;
+
+    if (!this.isWebUsbSupported) {
+      this.statusLabel.next('Your browser does NOT support WebUSB, and it is required.');
+    }
+  }
 
   async customUpload(event: any) {
     // Access the files from the event
