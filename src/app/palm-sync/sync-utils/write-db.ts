@@ -15,9 +15,8 @@ import {
   RawPdbRecord,
   RawPrcDatabase,
   RawPrcRecord,
-  RecordAttrs,
 } from 'palm-pdb';
-import {Serializable, SerializeOptions} from 'serio';
+
 import {
   DlpCloseDBReqType,
   DlpCreateDBReqType,
