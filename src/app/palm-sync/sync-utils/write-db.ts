@@ -48,39 +48,9 @@ export interface WriteDbOptions {
   overwrite?: boolean;
 }
 
-// /** Serialize and install a database to a Palm OS device. */
-// export async function writeDb<DatabaseT extends Serializable>(
-//   dlpConnection: DlpConnection,
-//   /** Database to write.
-//    *
-//    * This should typically be a subclass of Database from the palm-pdb package.
-//    * But we're keeping the signature generic here as that is not a hard
-//    * requirement.
-//    */
-//   db: DatabaseT,
-//   opts: WriteDbOptions & SerializeOptions = {}
-// ): Promise<void> {
-//   return await writeDbFromBuffer(dlpConnection, db.serialize(opts), opts);
-// }
-
-/** Install a PDB / PRC file to a Palm OS device. */
-// export async function writeDbFromFile(
-//   dlpConnection: DlpConnection,
-//   /** Path to the PDB / PRC file to install. */
-//   filePath: string,
-//   opts: WriteDbOptions = {}
-// ): Promise<void> {
-//   logFile(`=> ${filePath}`);
-//   return await writeDbFromBuffer(
-//     dlpConnection,
-//     await fs.readFile(filePath),
-//     opts
-//   );
-// }
-
-function log(statusLabel: BehaviorSubject<string>, msg: string) {
-  console.log(msg);
-  statusLabel.next(msg);
+function log(statusLabel: BehaviorSubject<string>, dbName: String, msg: string) {
+  console.log(`${dbName} - ${msg}`);
+  statusLabel.next(`${dbName} - ${msg}`);
 }
 
 export async function writeDbFromBuffer(
@@ -104,7 +74,7 @@ export async function writeRawDb(
   db: RawPdbDatabase | RawPrcDatabase,
   {cardNo = 0, overwrite}: WriteDbOptions = {}
 ): Promise<void> {
-  log(statusLabel, `Writing database ${db.header.name} to card ${cardNo}`);
+  log(statusLabel, db.header.name, `Writing database ${db.header.name} to card ${cardNo}`);
   await dlpConnection.execute(DlpOpenConduitReqType.with());
 
   // TODO: pilot-link's pi_file_install() function checks the size of records,
@@ -119,7 +89,7 @@ export async function writeRawDb(
 
   // 1. If we intend to overwrite, delete the database if it already exists.
   if (overwrite) {
-    log(statusLabel, `Deleting existing database`);
+    log(statusLabel, db.header.name, `Deleting existing database`);
     await dlpConnection.execute(
       DlpDeleteDBReqType.with({cardNo, name: db.header.name}),
       {ignoreErrorCode: DlpRespErrorCode.NOT_FOUND}
@@ -127,8 +97,7 @@ export async function writeRawDb(
   }
 
   // 2. Create the database.
-  log(statusLabel, `Creating database`);
-  statusLabel.next(`Creating database`);
+  log(statusLabel, db.header.name, `Creating database`);
   const {dbId} = await dlpConnection.execute(
     DlpCreateDBReqType.with({
       creator: db.header.creator,
@@ -142,7 +111,7 @@ export async function writeRawDb(
 
   // 3. Write AppInfo block.
   if (db.appInfo && db.appInfo.getSerializedLength()) {
-    log(statusLabel, `Writing AppInfo block`);
+    log(statusLabel, db.header.name, `Writing AppInfo block`);
     await dlpConnection.execute(
       DlpWriteAppBlockReqType.with({dbId, data: db.appInfo.value})
     );
@@ -150,7 +119,7 @@ export async function writeRawDb(
 
   // 4. Write SortInfo block.
   if (db.sortInfo && db.sortInfo.getSerializedLength()) {
-    log(statusLabel, `Writing SortInfo block`);
+    log(statusLabel, db.header.name, `Writing SortInfo block`);
     await dlpConnection.execute(
       DlpWriteSortBlockReqType.with({dbId, data: db.sortInfo.value})
     );
@@ -161,10 +130,10 @@ export async function writeRawDb(
     if (!(db instanceof RawPrcDatabase)) {
       throw new Error('Expected PRC database');
     }
-    log(statusLabel, `Writing records`);
+    log(statusLabel, db.header.name, `Writing records`);
     for (let i = 0; i < db.records.length; i++) {
-      //log(statusLabel, );
-      statusLabel.next(`Writing resource ${i + 1} of ${db.records.length}`);
+      //log(statusLabel, db.header.name, );
+      statusLabel.next(`${db.header.name} - Writing resource ${i + 1} of ${db.records.length}`);
       const record = db.records[i];
       await dlpConnection.execute(
         createWriteResourceReqFromRawPrcRecord(dbId, record)
@@ -179,7 +148,7 @@ export async function writeRawDb(
       throw new Error('Expected PDB database');
     }
     for (let i = 0; i < db.records.length; i++) {
-      //log(statusLabel, `Writing record ${i + 1} of ${db.records.length}`);
+      statusLabel.next(`${db.header.name} - Writing record ${i + 1} of ${db.records.length}`);
       const record = db.records[i];
       await dlpConnection.execute(
         createWriteRecordReqFromRawPdbRecord(dbId, record)
@@ -189,10 +158,10 @@ export async function writeRawDb(
 
   // 6. Close the database.
   if (shouldReset) {
-    log(statusLabel, `Resetting device`);
+    log(statusLabel, db.header.name, `Resetting device`);
     await dlpConnection.execute(DlpResetSystemReqType.with());
   }
-  log(statusLabel, 'Closing database');
+  log(statusLabel, db.header.name, 'Closing database');
   await dlpConnection.execute(DlpCloseDBReqType.with({dbId}));
 }
 

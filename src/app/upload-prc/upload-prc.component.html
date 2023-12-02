@@ -1,13 +1,13 @@
 <div class="card flex justify-content-center maincard">
-    <div
-     [hidden]="!isWebUsbSupported"
-    >
       <p-fileUpload
+        class="uploadForm"
+        [hidden]="!isWebUsbSupported"
         name="file"
         [customUpload]="true"
         [showCancelButton]="false"
         (uploadHandler)="customUpload($event)"
         (onSelect)="onFileSelect($event)"
+        [multiple]="true"
         accept=".prc,.pdb"
         uploadLabel="Install">
         <ng-template pTemplate="content">
@@ -16,7 +16,7 @@
           </div>
         </ng-template>
       </p-fileUpload>
-    </div>
   <p><b>Status:</b> {{statusLabel | async}}</p>
   <p>Powered by: <a href="https://github.com/jichu4n/palm-sync">palm-sync</a></p>
+  <!-- <img [src]="bitmapBase64" alt="Bitmap Image"> -->
 </div>

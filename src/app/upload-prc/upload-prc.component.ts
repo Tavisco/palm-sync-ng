@@ -9,6 +9,7 @@ import { SyncConnection } from '../palm-sync/protocols/sync-connections';
 import { HANDELD_VENDORS_ID } from '../palm-sync/sync-servers/usb-device-configs';
 import { writeDbFromBuffer } from '../palm-sync/sync-utils/write-db';
 import { BehaviorSubject } from 'rxjs';
+import { DatabaseHdrType, RawPdbDatabase, RawPrcDatabase, RsrcEntryType } from 'palm-pdb';
 
 async function runSync(
     statusLabel: BehaviorSubject<string>,
@@ -42,6 +43,7 @@ export class UploadPrcComponent {
 
   statusLabel = new BehaviorSubject<string>('Ready');
   isWebUsbSupported = false;
+  bitmapBase64: string = '';
   
   ngOnInit(): void {
     this.webUsbSupportCheck();
@@ -70,10 +72,15 @@ export class UploadPrcComponent {
     this.statusLabel.next('Starting sync...');
     await runSync(this.statusLabel, async (dlpConnection) => {
       this.statusLabel.next('Sync in progress...');
-      const arrbuf = await files[0].arrayBuffer();
-      const buffer = Buffer.from(arrbuf);
+      
+      for (let index = 0; index < files.length; index++) {
+        const file = files[index];
 
-      await writeDbFromBuffer(this.statusLabel, dlpConnection, buffer, { overwrite: true });
+        const arrbuf = await file.arrayBuffer();
+        const buffer = Buffer.from(arrbuf);
+  
+        await writeDbFromBuffer(this.statusLabel, dlpConnection, buffer, { overwrite: true });
+      }
     });
 
     this.statusLabel.next('Sync finished!');
@@ -92,9 +99,33 @@ export class UploadPrcComponent {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
 
-  onFileSelect(event: any) {
+  async onFileSelect(event: any) {
     // Handle file select event
-    console.log('File selected:', event);
+    // const arrbuf = await event.files[0].arrayBuffer();
+    // const buffer = Buffer.from(arrbuf);
+
+    // const header = DatabaseHdrType.from(buffer);
+    // const rawDb = header.attributes.resDB
+    //   ? RawPrcDatabase.from(buffer)
+    //   : RawPdbDatabase.from(buffer);
+
+    // console.log(rawDb);
+
+    // console.log(rawDb.toJSON());
+
+    // for (let index = 0; index < rawDb.records.length; index++) {
+    //   const element = rawDb.records[index].entry as RsrcEntryType;
+
+    //   if (element.type == "Tbmp"){
+    //     const bf = rawDb.records[index].data;
+
+    //     this.bitmapBase64 = bf.toString('base64');
+    //     console.log(this.bitmapBase64);
+    //     return;
+    //   }
+      
+    // }
+    
   }
 
 }
