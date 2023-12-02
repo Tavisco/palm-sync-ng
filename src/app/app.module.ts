@@ -10,7 +10,9 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TabViewModule } from 'primeng/tabview';
 import { FileUploadModule } from 'primeng/fileupload';
+import { TableModule } from 'primeng/table';
 import { UploadPrcComponent } from './upload-prc/upload-prc.component';
+import { DownloadPrcComponent } from './download-prc/download-prc.component';
   
 @NgModule({ 
 imports: [BrowserModule, 
@@ -19,8 +21,9 @@ imports: [BrowserModule,
         ButtonModule,
         CardModule,
         TabViewModule,
-        FileUploadModule,], 
-declarations: [AppComponent, UploadPrcComponent], 
+        FileUploadModule,
+        TableModule], 
+declarations: [AppComponent, UploadPrcComponent, DownloadPrcComponent], 
 bootstrap: [AppComponent] 
 }) 
 export class AppModule {}

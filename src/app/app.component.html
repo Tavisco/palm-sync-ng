@@ -5,14 +5,22 @@
       <p-tabView styleClass="tabview-custom">
         <p-tabPanel>
             <ng-template pTemplate="header">
-                <i class="pi pi-download"></i>
+                <i class="pi pi-upload"></i>
                 <span>Install app</span>
             </ng-template>
             <app-upload-prc></app-upload-prc>
         </p-tabPanel>
-    </p-tabView>
+        <p-tabPanel>
+          <ng-template pTemplate="header">
+              <i class="pi pi-download"></i>
+              <span>Retrieve app</span>
+          </ng-template>
+          <app-download-prc></app-download-prc>
+        </p-tabPanel>
+      </p-tabView>
+
+      <p>Powered by: <a href="https://github.com/jichu4n/palm-sync">palm-sync</a></p>
     </p-card>
-    
   </div>
   
 </div>

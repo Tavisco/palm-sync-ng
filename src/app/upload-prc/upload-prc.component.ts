@@ -11,28 +11,30 @@ import { writeDbFromBuffer } from '../palm-sync/sync-utils/write-db';
 import { BehaviorSubject } from 'rxjs';
 import { DatabaseHdrType, RawPdbDatabase, RawPrcDatabase, RsrcEntryType } from 'palm-pdb';
 
-async function runSync(
-    statusLabel: BehaviorSubject<string>,
-    /** Sync function to run for new connections. */
-    syncFn: SyncFn,
-    /** Additional options for the sync connection. */
-    opts: SyncConnectionOptions = {}
+export async function runSync(
+  statusLabel: BehaviorSubject<string>,
+  /** Sync function to run for new connections. */
+  syncFn: SyncFn,
+  /** Additional options for the sync connection. */
+  opts: SyncConnectionOptions = {}
 ) {
-  var syncServer: SyncServer = new UsbSyncServer(syncFn, opts);
+var syncServer: SyncServer = new UsbSyncServer(syncFn, opts);
 
-  syncServer.start(statusLabel);
+syncServer.start(statusLabel);
 
-  console.log('Component: Waiting for connection...');
-  const connection: SyncConnection = await pEvent(syncServer, 'connect');
-  console.log('Component: Connected!');
+console.log('Component: Waiting for connection...');
+const connection: SyncConnection = await pEvent(syncServer, 'connect');
+console.log('Component: Connected!');
 
-  await pEvent(syncServer, 'disconnect');
+await pEvent(syncServer, 'disconnect');
 
-  console.log('Component: Disconnected');
+console.log('Component: Disconnected');
 
-  await syncServer.stop();
-  return connection;
+await syncServer.stop();
+return connection;
 }
+
+
 
 @Component({
   selector: 'app-upload-prc',
@@ -129,3 +131,4 @@ export class UploadPrcComponent {
   }
 
 }
+
