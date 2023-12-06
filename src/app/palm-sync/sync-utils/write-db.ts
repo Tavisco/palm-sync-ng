@@ -127,6 +127,7 @@ export async function writeRawDb(
   // 5. Write records.
   if (db.header.attributes.resDB) {
     if (!(db instanceof RawPrcDatabase)) {
+      console.error('Expected PRC database');
       throw new Error('Expected PRC database');
     }
     log(statusLabel, db.header.name, `Writing records`);
@@ -144,6 +145,7 @@ export async function writeRawDb(
     }
   } else {
     if (!(db instanceof RawPdbDatabase)) {
+      console.error('Expected PDB database');
       throw new Error('Expected PDB database');
     }
     for (let i = 0; i < db.records.length; i++) {

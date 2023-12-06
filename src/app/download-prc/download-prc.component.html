@@ -1,24 +1,35 @@
 <div>
-    <p-button label="Load databases from device" [loading]="loading" (onClick)="load()"></p-button>
+    <div class="flex flex-wrap gap-3">
+        <p-button 
+        [label]="sourceDatabases.length == 0? 'Get databases list from device' : 'Refresh databases list from device'"
+        [loading]="loading"
+        (onClick)="load()"></p-button>
+    
+        <p-button 
+        label="Download selected"
+        [loading]="loading"
+        (onClick)="downloadSelected()"
+        [disabled]="selectedDatabases.length == 0"></p-button>
+    </div>
+
+
     <p><b>Status:</b> {{statusLabel | async}}</p>
-    <p-table [value]="databases" [scrollable]="true" scrollHeight="400px" [tableStyle]="{'min-width': '50rem'}">
-        <ng-template pTemplate="header">
-            <tr>
-                <th>Name</th>
-                <th>Version</th>
-                <th>Created at</th>
-                <th style="width: 5rem"></th>
-            </tr>
+
+    <p-pickList [source]="sourceDatabases" [target]="selectedDatabases" sourceHeader="Available" targetHeader="Selected" [dragdrop]="true" [responsive]="true" [sourceStyle]="{ height: '30rem' }"
+    [targetStyle]="{ height: '30rem' }" filterBy="name" sourceFilterPlaceholder="Search by name" targetFilterPlaceholder="Search by name" breakpoint="1400px" [hidden]="sourceDatabases.length == 0">
+        <ng-template let-product pTemplate="item">
+            <div class="flex flex-wrap p-2 align-items-center gap-3">
+                <div class="flex-1 flex flex-column gap-2">
+                    <span class="font-bold">{{ product.name }}</span>
+                    <div class="flex align-products-center gap-2">
+                        <i class="pi pi-tag text-sm"></i>
+                        Creator: <span>{{product.creator}}</span>
+                    </div>
+                </div>
+                <span class="font-bold text-900">{{product.type}}</span>
+            </div>
         </ng-template>
-        <ng-template pTemplate="body" let-database>
-            <tr>
-                <td>{{database.name}}</td>
-                <td>{{database.version}}</td>
-                <td>{{database.crDate}}</td>
-                <button type="button" pButton pRipple icon="pi pi-download" ></button>
-            </tr>
-        </ng-template>
-    </p-table>
+    </p-pickList>
 </div>
 
 

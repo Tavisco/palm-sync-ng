@@ -176,7 +176,7 @@ export class UsbConnectionStream extends Duplex {
     encoding: BufferEncoding | 'buffer',
     callback: (error?: Error | null) => void
   ) {
-    // console.log(`writing to endpoint ${this.config.outEndpoint}`);
+    console.log(`writing to endpoint ${this.config.outEndpoint}`);
 
     if (encoding !== 'buffer' || !(chunk instanceof Buffer)) {
       callback(new Error(`Unsupported encoding ${encoding}`));
@@ -187,10 +187,11 @@ export class UsbConnectionStream extends Duplex {
       chunk
     );
 
-    // console.log(`wrote ${result.status} - ${result.bytesWritten}`);
+    console.log(`wrote ${result.status} - ${result.bytesWritten}`);
     if (result.status === 'ok') {
       callback(null);
     } else {
+      console.error(`USB write failed with status ${result.status}`);
       callback(new Error(`USB write failed with status ${result.status}`));
     }
   }
@@ -198,11 +199,14 @@ export class UsbConnectionStream extends Duplex {
   override async _read(size: number) {
     let result: USBInTransferResult;
     try {
-      // console.log(`reading size ${size}`);
+      console.log(`reading size ${size}`);
       result = await this.device.transferIn(this.config.inEndpoint, size);
     } catch (e) {
       // console.log(`Failed!!!!!!!`);
       // console.log(e);
+      console.error(
+        'USB read error: ' + (e instanceof Error ? e.message : `${e}`)
+      );
       this.destroy(
         new Error(
           'USB read error: ' + (e instanceof Error ? e.message : `${e}`)
@@ -211,12 +215,13 @@ export class UsbConnectionStream extends Duplex {
       return;
     }
     if (result.status === 'ok') {
+      console.log(`reading size ${size} OK!!`);
       this.push(
         result.data ? Buffer.from(result.data.buffer) : Buffer.alloc(0)
       );
     } else {
       //this.destroy(new Error(`USB read failed with status ${result.status}`));
-      console.warn(`USB read failed with status ${result.status}`)
+      console.error(`USB read failed with status ${result.status}`)
     }
     
   }
@@ -228,6 +233,7 @@ const USB_DEVICE_POLLING_INTERVAL_MS = 200;
 export class UsbSyncServer extends SyncServer {
   override start(statusLabel: BehaviorSubject<string>) {
     if (this.runPromise) {
+      console.error('Server already started');
       throw new Error('Server already started');
     }
     this.runPromise = this.run(statusLabel);
@@ -242,11 +248,12 @@ export class UsbSyncServer extends SyncServer {
       await this.runPromise;
     } catch (e) {}
     this.runPromise = null;
-    this.shouldStop = false;
+    //this.shouldStop = false;
   }
 
   private async run(statusLabel: BehaviorSubject<string>) {
     while (!this.shouldStop) {
+      console.warn('should NOT stop!!!');
       log(statusLabel, 'Waiting for device...');
       const deviceResult = await this.waitForDevice();
       if (!deviceResult) {
@@ -267,15 +274,18 @@ export class UsbSyncServer extends SyncServer {
           log(statusLabel, 'Closing device');
           await this.closeDevice(device);
         }
+        this.shouldStop = true;
       } catch (e) {
         log(statusLabel, 'Error syncing with device');
-        console.log(e);
+        console.error(e);
       }
 
       log(statusLabel, 'Waiting for device to disconnect');
       try {
         await this.waitForDeviceToDisconnect(rawDevice);
-      } catch (e) {}
+      } catch (e) {
+        console.error(e);
+      }
 
       log(statusLabel, 'Device disconnected');
     }
@@ -455,9 +465,10 @@ export class UsbSyncServer extends SyncServer {
         await device.releaseInterface(
           device.configuration.interfaces[0].interfaceNumber
         );
+        console.warn('Interface released');
       }
     } catch (e) {
-      console.log(`Could not release interface: ${e}`);
+      console.error(`Could not release interface: ${e}`);
     }
     // Close device. This currently always fails with a an error "Can't close
     // device with a pending request", so we don't really need it but keeping it
@@ -465,8 +476,9 @@ export class UsbSyncServer extends SyncServer {
     // https://github.com/node-usb/node-usb/issues/254
     try {
       await device.close();
+      console.warn('Device closed');
     } catch (e) {
-      console.log(`Could not close device: ${e}`);
+      console.error(`Could not close device: ${e}`);
     }
   }
 
@@ -482,6 +494,7 @@ export class UsbSyncServer extends SyncServer {
             d.vendorId === idVendor && d.productId === idProduct
         )
       ) {
+        console.warn('Device not found anymore');
         return;
       }
       await new Promise((resolve) =>
@@ -506,12 +519,12 @@ export class UsbSyncServer extends SyncServer {
     );
     if (result.status !== 'ok') {
       const message = `${requestName} failed with status ${result.status}`;
-      console.log(`--- ${message}`);
+      console.error(`--- ${message}`);
       throw new Error(message);
     }
     if (!result.data) {
       const message = `${requestName} returned no data`;
-      console.log(`--- ${message}`);
+      console.error(`--- ${message}`);
       throw new Error(message);
     }
     const responseData = Buffer.from(result.data.buffer);
@@ -520,7 +533,7 @@ export class UsbSyncServer extends SyncServer {
       response.deserialize(Buffer.from(result.data.buffer));
     } catch (e: any) {
       const message = `Failed to parse ${requestName} response: ${e.message}`;
-      console.log(`--- ${message}`);
+      console.error(`--- ${message}`);
       throw new Error(message);
     }
     console.log(`<<< ${JSON.stringify(response)}`);

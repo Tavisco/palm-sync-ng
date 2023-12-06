@@ -107,6 +107,12 @@ export class SlpDatagramHeader extends SObject {
 
     // Validate SLP signature.
     if (!Buffer.from(this.signature).equals(Buffer.from(SLP_SIGNATURE))) {
+      console.error(
+        `Invalid SLP signature: ` +
+          `expected 0x${Buffer.from(SLP_SIGNATURE).toString('hex')}, ` +
+          `got 0x${Buffer.from(this.signature).toString('hex')}\n` +
+          `raw header: ${buffer.slice(0, readOffset).toString('hex')}`
+      );
       throw new Error(
         `Invalid SLP signature: ` +
           `expected 0x${Buffer.from(SLP_SIGNATURE).toString('hex')}, ` +
@@ -118,6 +124,12 @@ export class SlpDatagramHeader extends SObject {
     // Validate header checksum.
     const expectedChecksum = this.computeChecksum();
     if (this.checksum !== expectedChecksum) {
+      console.error(
+        `Invalid SLP header checksum: ` +
+          `expected 0x${expectedChecksum.toString(16)}, ` +
+          `got 0x${this.checksum.toString(16)}\n` +
+          `raw header: ${buffer.slice(0, readOffset).toString('hex')}`
+      );
       throw new Error(
         `Invalid SLP header checksum: ` +
           `expected 0x${expectedChecksum.toString(16)}, ` +
@@ -171,6 +183,10 @@ export class SlpDatagram extends SerializableWrapper<Buffer> {
     const expectedCrc = crc16(buffer.slice(0, reader.readOffset));
     const crc = reader.readUInt16BE();
     if (crc !== expectedCrc) {
+      console.error(
+        `Invalid SLP CRC: ` +
+          `expected ${expectedCrc.toString(16)}, got ${crc.toString(16)}`
+      );
       throw new Error(
         `Invalid SLP CRC: ` +
           `expected ${expectedCrc.toString(16)}, got ${crc.toString(16)}`

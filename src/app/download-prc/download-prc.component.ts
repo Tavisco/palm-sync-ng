@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { DlpDBInfoType } from '../palm-sync/protocols/dlp-commands';
 import { BehaviorSubject } from 'rxjs';
-import { readDbList } from '../palm-sync/sync-utils/read-db';
+import { readDbList, readRawDb } from '../palm-sync/sync-utils/read-db';
 import * as pEvent from 'p-event';
 import { SyncConnectionOptions, SyncConnection } from '../palm-sync/protocols/sync-connections';
 import { SyncFn, SyncServer } from '../palm-sync/sync-servers/sync-server';
@@ -41,30 +41,55 @@ return connection;
 export class DownloadPrcComponent {
 
   loading = false;
-  databases: DlpDBInfoType[] = [];
+  sourceDatabases: DlpDBInfoType[] = [];
+  selectedDatabases: DlpDBInfoType[] = [];
   statusLabel = new BehaviorSubject<string>('Ready');
 
   async load() {
+    this.loading = true;
+    this.statusLabel.next('Press the hotsync button and select your device');
+    await navigator.usb.requestDevice({ filters: HANDELD_VENDORS_ID });
+
+    await runSync(this.statusLabel, async (dlpConnection) => {
+      try {
+        this.sourceDatabases = await readDbList(this.statusLabel, dlpConnection, {
+          ram: true,
+          rom: false,
+        });
+
+        //console.log(this.sourceDatabases);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+    this.loading = false;
+  }
+
+  async downloadSelected() {
+    this.loading = true;
 
     this.statusLabel.next('Press the hotsync button and select your device');
     await navigator.usb.requestDevice({ filters: HANDELD_VENDORS_ID });
 
     await runSync(this.statusLabel, async (dlpConnection) => {
       try {
-        this.databases = await readDbList(this.statusLabel, dlpConnection, {
-          ram: true,
-          rom: false,
-        });
-  
-        console.log(this.databases.map(({name}) => `=> ${name}`).join('\n'));
+        for (const db of this.selectedDatabases) {
+          console.log(`Start pulling ${db.name}`);
+          this.statusLabel.next(`Pulling ${db.name}`);
+          const rawDb = await readRawDb(dlpConnection, db.name);
+          const ext = rawDb.header.attributes.resDB ? 'prc' : 'pdb';
+          const fileName = `${db.name}.${ext}`;
+          console.log(`Successfully pulled ${fileName}`);
+          console.log(rawDb);
+        }
 
-        console.log(this.databases);
       } catch (error) {
         console.log(error);
       }
-      
     });
 
+    this.loading = false;
   }
 
 }

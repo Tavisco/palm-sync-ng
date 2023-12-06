@@ -335,6 +335,11 @@ export class DlpWriteUserInfoReqType extends DlpRequest<DlpWriteUserInfoRespType
   override serialize(opts?: SerializeOptions): Buffer {
     this.userNameLen = SStringNT.of(this.userName).getSerializedLength(opts);
     if (this.userNameLen - 1 > MAX_USER_NAME_LENGTH) {
+      console.error(
+        'User name too long: ' +
+          `${this.userNameLen - 1} exceeds maximum length ` +
+          `of ${MAX_USER_NAME_LENGTH}`
+      );
       throw new Error(
         'User name too long: ' +
           `${this.userNameLen - 1} exceeds maximum length ` +

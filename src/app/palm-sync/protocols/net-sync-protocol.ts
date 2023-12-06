@@ -20,6 +20,7 @@ export class NetSyncDatagramReadStream extends Transform {
     callback: (err?: Error | null) => void
   ) {
     if (encoding !== 'buffer') {
+      console.error(`Unsupported encoding ${encoding}`);
       callback(new Error(`Unsupported encoding ${encoding}`));
       return;
     }
@@ -101,6 +102,7 @@ export class NetSyncDatagramWriteStream extends Transform {
     callback: (err?: Error | null, data?: Buffer) => void
   ) {
     if (encoding !== 'buffer') {
+      console.error(`Unsupported encoding ${encoding}`);
       callback(new Error(`Unsupported encoding ${encoding}`));
       return;
     }

@@ -36,6 +36,11 @@ export abstract class DlpRequest<
 
     const actualFuncId = reader.readUInt8();
     if (actualFuncId !== this.funcId) {
+      console.error(
+        'Function ID mismatch: ' +
+          `expected 0x${this.funcId.toString(16).padStart(2, '0')}, ` +
+          `got 0x${actualFuncId.toString(16).padStart(2, '0')}`
+      );
       throw new Error(
         'Function ID mismatch: ' +
           `expected 0x${this.funcId.toString(16).padStart(2, '0')}, ` +
@@ -188,12 +193,20 @@ export abstract class DlpResponse extends SObject {
     const reader = SmartBuffer.fromBuffer(buffer);
     let actualFuncId = reader.readUInt8();
     if (!(actualFuncId & DLP_RESPONSE_TYPE_BITMASK)) {
+      console.error(
+        `Invalid response function ID: 0x${actualFuncId.toString(16)}`
+      );
       throw new Error(
         `Invalid response function ID: 0x${actualFuncId.toString(16)}`
       );
     }
     actualFuncId &= DLP_RESPONSE_FUNC_ID_BITMASK;
     if (actualFuncId !== this.funcId) {
+      console.error(
+        `Function ID mismatch in ${this.constructor.name}: ` +
+          `expected 0x${this.funcId.toString(16).padStart(2, '0')}, ` +
+          `got 0x${actualFuncId.toString(16).padStart(2, '0')}`
+      );
       throw new Error(
         `Function ID mismatch in ${this.constructor.name}: ` +
           `expected 0x${this.funcId.toString(16).padStart(2, '0')}, ` +
@@ -214,6 +227,10 @@ export abstract class DlpResponse extends SObject {
       );
     } else {
       if (numDlpArgs !== 0) {
+        console.error(
+          `Error response with non-zero arguments in ${this.constructor.name}: ` +
+            `${numDlpArgs}`
+        );
         throw new Error(
           `Error response with non-zero arguments in ${this.constructor.name}: ` +
             `${numDlpArgs}`
@@ -261,6 +278,10 @@ function parseDlpArgs(
   const numRequiredDlpArgs =
     args.length - _(args).map('isOptional').filter().size();
   if (numDlpArgs < numRequiredDlpArgs) {
+    console.error(
+      `Argument count mismatch in ${dlpRequestOrResponse.constructor.name}: ` +
+        `expected ${numRequiredDlpArgs}, got ${numDlpArgs}`
+    );
     throw new Error(
       `Argument count mismatch in ${dlpRequestOrResponse.constructor.name}: ` +
         `expected ${numRequiredDlpArgs}, got ${numDlpArgs}`
@@ -271,6 +292,11 @@ function parseDlpArgs(
     const arg = args[i];
     readOffset += arg.deserialize(buffer.slice(readOffset), opts);
     if (arg.value.value.length !== arg.dlpArgSpecs.length) {
+      console.error(
+        `Argument field count mismatch in ${dlpRequestOrResponse.constructor.name} ` +
+          `argument ${i + 1}: ` +
+          `expected ${arg.dlpArgSpecs.length}, got ${arg.value.value.length}`
+      );
       throw new Error(
         `Argument field count mismatch in ${dlpRequestOrResponse.constructor.name} ` +
           `argument ${i + 1}: ` +
@@ -392,6 +418,10 @@ function getDlpArgs(targetInstance: SObject) {
       );
       const isOptionalArray = _(dlpArgSpecs).map('isOptional').uniq().value();
       if (isOptionalArray.length !== 1) {
+        console.error(
+          `Found conflicting definitions for DLP argument ID ${argIdString} ` +
+            `in class ${targetInstance.constructor.name}`
+        );
         throw new Error(
           `Found conflicting definitions for DLP argument ID ${argIdString} ` +
             `in class ${targetInstance.constructor.name}`
@@ -530,6 +560,10 @@ class DlpArg extends SObject {
       ([_, {bitmask}]) => argTypeBits === bitmask
     );
     if (!argTypeSpec) {
+      console.error(
+        'Could not determine argument ID type: ' +
+          `0x${argIdWithArgTypeBitmask.toString(16)}`
+      );
       throw new Error(
         'Could not determine argument ID type: ' +
           `0x${argIdWithArgTypeBitmask.toString(16)}`
@@ -569,6 +603,7 @@ class DlpArg extends SObject {
       ([_, {maxLength}]) => dataLength <= maxLength
     );
     if (!dlpArgTypesEntry) {
+      console.error(`Unsupported data length: ${dataLength}`);
       throw new Error(`Unsupported data length: ${dataLength}`);
     }
     return dlpArgTypesEntry[0];

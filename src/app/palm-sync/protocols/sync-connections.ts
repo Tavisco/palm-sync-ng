@@ -59,17 +59,18 @@ export class DlpConnection {
       encoding: DEFAULT_ENCODING,
       ...this.opts.requestSerializeOptions,
     });
-    // console.log(
-    //   `Request >>> ${request.constructor.name} ${requestBuffer.toString('hex')}\n` +
-    //     `    ${JSON.stringify(request.toJSON())}`
-    // );
+    console.log(
+      `Request >>> ${request.constructor.name} ${requestBuffer.toString('hex')}\n` +
+        `    ${JSON.stringify(request.toJSON())}`
+    );
 
     this.transport.write(requestBuffer);
+    console.log('Write OK');
     const responseBuffer = (await pEvent(this.transport, 'data')) as Buffer;
 
-    // console.log(
-    //   `Response <<< ${request.responseType.name} ${responseBuffer.toString('hex')}`
-    // );
+    console.log(
+      `Response <<< ${request.responseType.name} ${responseBuffer.toString('hex')}`
+    );
     const response: DlpResponseType<DlpRequestT> = new request.responseType();
     try {
       response.deserialize(responseBuffer, {
@@ -77,7 +78,7 @@ export class DlpConnection {
         ...this.opts.responseDeserializeOptions,
       });
     } catch (e: any) {
-      console.log(`    Error parsing ${request.responseType.name}: ${e.message}`);
+      console.error(`    Error parsing ${request.responseType.name}: ${e.message}`);
       throw e;
     }
 
@@ -89,7 +90,7 @@ export class DlpConnection {
         ` error 0x${response.errorCode.toString(16).padStart(2, '0')} ` +
         `${DlpRespErrorCode[response.errorCode]}: ` +
         response.errorMessage;
-      console.log(`    ${errorMessage}`);
+      console.error(`    ${errorMessage}`);
       if (
         !opts.ignoreErrorCode ||
         (typeof opts.ignoreErrorCode === 'number' &&
@@ -97,6 +98,7 @@ export class DlpConnection {
         (Array.isArray(opts.ignoreErrorCode) &&
           !opts.ignoreErrorCode.includes(response.errorCode))
       ) {
+        console.error(errorMessage);
         throw new Error(errorMessage);
       }
     }
@@ -245,6 +247,11 @@ export class NetSyncConnection extends SyncConnection<NetSyncDatagramStream> {
       expectedLength &&
       (!data || !data.length || data.length !== expectedLength)
     ) {
+      console.error(
+        `Error reading data: expected ${expectedLength} bytes, got ${
+          data.length || 'none'
+        }`
+      );
       throw new Error(
         `Error reading data: expected ${expectedLength} bytes, got ${
           data.length || 'none'

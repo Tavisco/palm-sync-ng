@@ -112,6 +112,7 @@ export class CmpDatagram extends SObject {
         (this.type === CmpDatagramType.ABORT &&
           !(this.attrs instanceof CmpAbortDatagramAttrs)))
     ) {
+      console.error(`Invalid attrs type for CMP ${CmpDatagramType[this.type]}`);
       throw new Error(
         `Invalid attrs type for CMP ${CmpDatagramType[this.type]}`
       );
@@ -132,6 +133,10 @@ export async function doCmpHandshake(
   // Read initial WAKEUP.
   const wakeupDatagram = CmpDatagram.from(await pEvent(stream, 'data'));
   if (wakeupDatagram.type !== CmpDatagramType.WAKEUP) {
+    console.error(
+      `Expected CMP datagram of type WAKEUP, ` +
+      `got ${CmpDatagramType[wakeupDatagram.type]}`
+    );
     throw new Error(
       `Expected CMP datagram of type WAKEUP, ` +
         `got ${CmpDatagramType[wakeupDatagram.type]}`
