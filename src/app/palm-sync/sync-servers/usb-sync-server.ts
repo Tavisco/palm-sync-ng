@@ -152,11 +152,15 @@ export interface UsbConnectionConfig {
   inEndpoint: number;
   /** Out endpoint number. */
   outEndpoint: number;
+  /** Index */
+  index: number;
 }
 
 function log(statusLabel: BehaviorSubject<string>, msg: string) {
   console.log(msg);
-  statusLabel.next(msg);
+
+  if (!statusLabel.value.startsWith("FAILED"))
+    statusLabel.next(msg);
 }
 
 /** Duplex stream for HotSync with an initialized USB device. */
@@ -253,7 +257,6 @@ export class UsbSyncServer extends SyncServer {
 
   private async run(statusLabel: BehaviorSubject<string>) {
     while (!this.shouldStop) {
-      console.warn('should NOT stop!!!');
       log(statusLabel, 'Waiting for device...');
       const deviceResult = await this.waitForDevice();
       if (!deviceResult) {
@@ -266,14 +269,20 @@ export class UsbSyncServer extends SyncServer {
 
       try {
         const {device, stream} = await this.openDevice(rawDevice, deviceConfig);
-        log(statusLabel, `Connection opened successfully`);
+
         if (stream) {
+          log(statusLabel, `Connection opened successfully`);
           await this.onConnection(statusLabel, stream, protocolStackType);
+        } else {
+          log(statusLabel, `FAILED: The device could not be initialized!`);
+          this.shouldStop = true;
         }
-        if (device) {
+
+        if (device && !this.shouldStop) {
           log(statusLabel, 'Closing device');
           await this.closeDevice(device);
         }
+
         this.shouldStop = true;
       } catch (e) {
         log(statusLabel, 'Error syncing with device');
@@ -388,6 +397,7 @@ export class UsbSyncServer extends SyncServer {
     // 1. Open device.
     try {
       await device.open();
+      console.log(`Device opened`);
     } catch (e) {
       console.log(`Could not open device: ${e}`);
       return {device: null, stream: null};
@@ -397,6 +407,7 @@ export class UsbSyncServer extends SyncServer {
       console.log('No configurations available for USB device');
       return {device, stream: null};
     }
+    console.log(`Device has configuration, and has [${device.configuration.interfaces.length}] interfaces`);
     if (device.configuration.interfaces.length < 1) {
       console.log(
         `No interfaces available in configuration ${device.configuration.configurationValue}`
@@ -407,12 +418,11 @@ export class UsbSyncServer extends SyncServer {
 
     try {
       await device.claimInterface(interfaceNumber);
+      console.log(`Claimed interface ${interfaceNumber}`);
     } catch (e) {
       console.log(`Could not claim interface ${interfaceNumber}: ${e}`);
       return {device, stream: null};
     }
-
-    console.log(`Claimed interface ${interfaceNumber}`);
 
     // 2. Get device config.
     let connectionConfigFromInitFn: UsbConnectionConfig | null = null;
@@ -421,6 +431,7 @@ export class UsbSyncServer extends SyncServer {
       connectionConfigFromInitFn = await this.USB_INIT_FNS[
         deviceConfig.initType
       ](device);
+      console.log(`Trying to get config from USBDeviceInfo`);
       connectionConfigFromUsbDeviceInfo =
         await this.getConnectionConfigFromUsbDeviceInfo(device);
     } catch (e) {
@@ -511,7 +522,7 @@ export class UsbSyncServer extends SyncServer {
   ): Promise<ResponseT> {
     const response = new responseT();
     const requestName = response.constructor.name.replace(/Response$/, '');
-    console.log(`>>> ${requestName}`);
+    console.log(`>>> [${requestName}] with config [${JSON.stringify(setup)}]`);
 
     const result = await device.controlTransferIn(
       setup,
@@ -544,24 +555,42 @@ export class UsbSyncServer extends SyncServer {
     device: USBDevice
   ): Promise<UsbConnectionConfig | null> {
     let response: GetConnectionInfoResponse;
-    console.log(`Trying to find endpoints`);
-    try {
-      response = await this.sendUsbControlRequest(
-        device,
-        {
-          requestType: 'vendor',
-          recipient: 'endpoint',
-          request: UsbControlRequestType.GET_CONNECTION_INFO,
-          index: 2,
-          value: 0,
-        },
-        GetConnectionInfoResponse
-      );
-    } catch (e) {
-      console.log('Failed to find conn info!');
-      console.error(e);
-      return null;
+    console.log(`Trying initialization method: GetConnectionInfo`);
+
+    let index = 0;
+
+    const sendcmd = async (): Promise<GetConnectionInfoResponse> => {
+      console.log(`Trying with index [${index}]`);
+      try {
+        response = await this.sendUsbControlRequest(
+          device,
+          {
+            requestType: 'vendor',
+            recipient: 'endpoint',
+            request: UsbControlRequestType.GET_CONNECTION_INFO,
+            value: 0,
+            index: index,
+          },
+          GetConnectionInfoResponse
+        );
+        console.log(`Index [${index}] is the correct one!`);
+        return response;
+      } catch (e: any) {
+        console.log(`Index [${index}] failed: ${e}`);
+        if (index < 16) {
+          if (e.message.includes('The specified endpoint')) {
+            index = index + 1;
+            return await sendcmd();
+          }
+        }
+
+        console.error(`GetConnectionInfo failed with error: ${e}`);
+        throw e;
+      }
     }
+
+    response = await sendcmd();
+
     const portInfo = response.ports
       .slice(0, response.numPorts)
       .find(
@@ -573,29 +602,49 @@ export class UsbSyncServer extends SyncServer {
     }
 
     console.log(`Found endpoint ${portInfo.portNumber}`);
-    return {inEndpoint: portInfo.portNumber, outEndpoint: portInfo.portNumber};
+    return {inEndpoint: portInfo.portNumber, outEndpoint: portInfo.portNumber, index: index};
   }
 
   private async getConnectionConfigUsingGetExtConnectionInfo(
     device: USBDevice
   ): Promise<UsbConnectionConfig | null> {
     let response: GetExtConnectionInfoResponse;
-    try {
-      response = await this.sendUsbControlRequest(
-        device,
-        {
-          requestType: 'vendor',
-          recipient: 'endpoint',
-          request: UsbControlRequestType.GET_EXT_CONNECTION_INFO,
-          index: 2,
-          value: 0,
-        },
-        GetExtConnectionInfoResponse
-      );
-    } catch (e) {
-      console.log(e);
-      return null;
+    console.log(`Trying initialization method: GetExtConnectionInfo`);
+
+    let index = 0;
+
+    const sendcmd = async (): Promise<GetExtConnectionInfoResponse> => {
+      console.log(`Trying with index [${index}]`);
+      try {
+        response = await this.sendUsbControlRequest(
+          device,
+          {
+            requestType: 'vendor',
+            recipient: 'endpoint',
+            request: UsbControlRequestType.GET_EXT_CONNECTION_INFO,
+            value: 0,
+            index: index,
+          },
+          GetExtConnectionInfoResponse
+        );
+        console.log(`Index [${index}] is the correct one!`);
+        return response;
+      } catch (e: any) {
+        console.log(`Index [${index}] failed: ${e}`);
+        if (index < 16) {
+          if (e.message.includes('The specified endpoint')) {
+            index = index + 1;
+            return await sendcmd();
+          }
+        }
+
+        console.error(`GetConnectionInfo failed with error: ${e}`);
+        throw e;
+      }
     }
+
+    response = await sendcmd();
+
     const portInfo = response.ports
       .slice(0, response.numPorts)
       .find(({type}) => type === HOT_SYNC_PORT_TYPE);
@@ -609,11 +658,13 @@ export class UsbSyncServer extends SyncServer {
       return {
         inEndpoint: portInfo.endpoints.inEndpoint,
         outEndpoint: portInfo.endpoints.outEndpoint,
+        index: index
       };
     } else {
       return {
         inEndpoint: portInfo.portNumber,
         outEndpoint: portInfo.portNumber,
+        index: index
       };
     }
   }
@@ -652,6 +703,7 @@ export class UsbSyncServer extends SyncServer {
     return {
       inEndpoint: inEndpoint.endpointNumber,
       outEndpoint: outEndpoint.endpointNumber,
+      index: 2
     };
   }
 
@@ -667,6 +719,8 @@ export class UsbSyncServer extends SyncServer {
     [UsbInitType.GENERIC]: async (device) => {
       let config: UsbConnectionConfig | null;
 
+      console.log(`Trying to initialize device...`);
+
       // First try GetExtConnectionInfo. Some devices may have different in and
       // out endpoints, which can only be fetched with GetExtConnectionInfo.
       config = await this.getConnectionConfigUsingGetExtConnectionInfo(device);
@@ -674,6 +728,7 @@ export class UsbSyncServer extends SyncServer {
         return config;
       }
 
+      console.log(`Getting configs directly from device failed. Falling back to GetConnectionInfo`);
       // If GetExtConnectionInfo isn't supported, fall back to GetConnectionInfo.
       config = await this.getConnectionConfigUsingGetConnectionInfo(device);
       if (config) {
@@ -686,13 +741,15 @@ export class UsbSyncServer extends SyncServer {
             requestType: 'vendor',
             recipient: 'endpoint',
             request: UsbControlRequestType.GET_NUM_BYTES_AVAILABLE,
-            index: 2,
+            index: config.index,
             value: 0,
           },
           GetNumBytesAvailableResponse
         );
         return config;
       }
+
+      console.error(`Failed to initialize the device at all!`);
 
       return null;
     },
