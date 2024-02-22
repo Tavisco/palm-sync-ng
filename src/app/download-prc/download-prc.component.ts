@@ -7,6 +7,7 @@ import { SyncConnectionOptions, SyncConnection } from '../palm-sync/protocols/sy
 import { SyncFn, SyncServer } from '../palm-sync/sync-servers/sync-server';
 import { UsbSyncServer } from '../palm-sync/sync-servers/usb-sync-server';
 import { HANDELD_VENDORS_ID } from '../palm-sync/sync-servers/usb-device-configs';
+import { RawPdbDatabase, RawPrcDatabase } from 'palm-pdb';
 
 
 export async function runSync(
@@ -72,6 +73,8 @@ export class DownloadPrcComponent {
     this.statusLabel.next('Press the hotsync button and select your device');
     await navigator.usb.requestDevice({ filters: HANDELD_VENDORS_ID });
 
+    let resources: (RawPdbDatabase | RawPrcDatabase)[] = []
+
     await runSync(this.statusLabel, async (dlpConnection) => {
       try {
         for (const db of this.selectedDatabases) {
@@ -81,12 +84,28 @@ export class DownloadPrcComponent {
           const ext = rawDb.header.attributes.resDB ? 'prc' : 'pdb';
           const fileName = `${db.name}.${ext}`;
           console.log(`Successfully pulled ${fileName}`);
-          console.log(rawDb);
+          resources.push(rawDb);
         }
 
       } catch (error) {
         console.log(error);
       }
+    });
+
+    console.log('Finished downloading!');
+    console.log(resources);
+
+    resources.forEach(rsc => {
+      const file = new Blob([rsc.serialize()], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(file);
+
+      const a = document.createElement('a');
+      a.href = url;
+      const ext = rsc.header.attributes.resDB ? 'prc' : 'pdb';
+      const fileName = `${rsc.header.name}.${ext}`;
+      a.download = fileName;
+      a.click();
+    
     });
 
     this.loading = false;
