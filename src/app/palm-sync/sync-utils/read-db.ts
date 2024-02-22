@@ -45,6 +45,13 @@ import {DlpRespErrorCode} from '../protocols/dlp-protocol';
 import {DlpConnection} from '../protocols/sync-connections';
 import { BehaviorSubject } from 'rxjs';
 
+function log(statusLabel: BehaviorSubject<string>, msg: string) {
+  console.log(msg);
+
+  if (!statusLabel.value.startsWith("FAILED"))
+    statusLabel.next(msg);
+}
+
 /** Options to {@link readDb} and {@link readRawDb}. */
 export interface ReadDbOptions {
   /** Card number on the Palm OS device (typically 0). */
@@ -64,6 +71,7 @@ export interface ReadDbOptions {
 
 /** Read and parse a database from a Palm OS device. */
 export async function readDb<DatabaseT extends Serializable>(
+  statusLabel: BehaviorSubject<string>,
   dlpConnection: DlpConnection,
   /** Database type constructor.
    *
@@ -77,7 +85,7 @@ export async function readDb<DatabaseT extends Serializable>(
   /** Additional options. */
   opts: ReadDbOptions & DeserializeOptions = {}
 ) {
-  const rawDb = await readRawDb(dlpConnection, name, opts);
+  const rawDb = await readRawDb(statusLabel, dlpConnection, name, opts);
   const db = new dbType();
   db.deserialize(rawDb.serialize(), opts);
   return db;
@@ -149,6 +157,7 @@ export async function readDbList(
 
 /** Read a database from a Palm OS device. */
 export async function readRawDb(
+  statusLabel: BehaviorSubject<string>,
   dlpConnection: DlpConnection,
   /** Database name to read. */
   name: string,
@@ -160,7 +169,7 @@ export async function readRawDb(
     dbInfo: dbInfoArg,
     includeDeletedAndArchivedRecords,
   } = opts;
-  console.log(`Reading database ${name} on card ${cardNo}`);
+  log(statusLabel, `Reading database ${name} on card ${cardNo}`);
   await dlpConnection.execute(DlpOpenConduitReqType.with());
 
   // 1. Open database and get basic database info.
@@ -210,7 +219,7 @@ export async function readRawDb(
     findDbResp.appBlkSize > 0 ||
     findDbResp.info.miscFlags.ramBased
   ) {
-    console.log('Reading AppInfo block');
+    log(statusLabel, 'Reading AppInfo block');
     const appInfoBlockResp = await dlpConnection.execute(
       DlpReadAppBlockReqType.with({dbId}),
       {
@@ -220,10 +229,10 @@ export async function readRawDb(
     if (appInfoBlockResp.errorCode === DlpRespErrorCode.NONE) {
       appInfoBlock = appInfoBlockResp.data;
     } else {
-      console.log('AppInfo block not found');
+      log(statusLabel, 'AppInfo block not found');
     }
   } else {
-    console.log('Skipping AppInfo block');
+    log(statusLabel, 'Skipping AppInfo block');
   }
 
   // 3. Read SortInfo block.
@@ -235,7 +244,7 @@ export async function readRawDb(
     findDbResp.sortBlkSize > 0 ||
     findDbResp.info.miscFlags.ramBased
   ) {
-    console.log('Reading SortInfo block');
+    log(statusLabel, 'Reading SortInfo block');
     const sortInfoBlockResp = await dlpConnection.execute(
       DlpReadSortBlockReqType.with({dbId}),
       {
@@ -245,10 +254,10 @@ export async function readRawDb(
     if (sortInfoBlockResp.errorCode === DlpRespErrorCode.NONE) {
       sortInfoBlock = sortInfoBlockResp.data;
     } else {
-      console.log('SortInfo block not found');
+      log(statusLabel, 'SortInfo block not found');
     }
   } else {
-    console.log('Skipping SortInfo block');
+    log(statusLabel, 'Skipping SortInfo block');
   }
 
   let db: RawPdbDatabase | RawPrcDatabase;
@@ -267,7 +276,7 @@ export async function readRawDb(
   if (dbInfo.dbFlags.resDB) {
     const records: Array<RawPrcRecord> = [];
     for (let i = 0; i < numRecords; ++i) {
-      console.log(`Reading resource ${i + 1} of ${numRecords}`);
+      log(statusLabel, `${name} - Reading resource ${i + 1} of ${numRecords}`);
       const readResourceResp = await dlpConnection.execute(
         DlpReadResourceByIndexReqType.with({dbId, index: i})
       );
@@ -278,7 +287,7 @@ export async function readRawDb(
   } else {
     const records: Array<RawPdbRecord> = [];
     for (let i = 0; i < numRecords; ++i) {
-      console.log(`Reading record ${i + 1} of ${numRecords}`);
+      log(statusLabel, `${name} - Reading record ${i + 1} of ${numRecords}`);
       const readRecordResp = await dlpConnection.execute(
         DlpReadRecordByIndexReqType.with({dbId, index: i})
       );
@@ -288,7 +297,7 @@ export async function readRawDb(
           readRecordResp.attributes.archive) &&
         !includeDeletedAndArchivedRecords
       ) {
-        console.log(`Skipping deleted / archived record`);
+        log(statusLabel, `Skipping deleted / archived record`);
       } else {
         records.push(createRawPdbRecordFromReadRecordResp(readRecordResp));
       }
@@ -297,7 +306,7 @@ export async function readRawDb(
   }
 
   // 5. Close database.
-  console.log('Closing database');
+  log(statusLabel, 'Closing database');
   await dlpConnection.execute(DlpCloseDBReqType.with({dbId}));
 
   db.recomputeOffsets();

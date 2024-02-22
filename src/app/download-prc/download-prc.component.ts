@@ -80,7 +80,7 @@ export class DownloadPrcComponent {
         for (const db of this.selectedDatabases) {
           console.log(`Start pulling ${db.name}`);
           this.statusLabel.next(`Pulling ${db.name}`);
-          const rawDb = await readRawDb(dlpConnection, db.name);
+          const rawDb = await readRawDb(this.statusLabel, dlpConnection, db.name);
           const ext = rawDb.header.attributes.resDB ? 'prc' : 'pdb';
           const fileName = `${db.name}.${ext}`;
           console.log(`Successfully pulled ${fileName}`);

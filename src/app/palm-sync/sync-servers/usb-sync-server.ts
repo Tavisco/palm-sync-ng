@@ -292,7 +292,7 @@ export class UsbSyncServer extends SyncServer {
         console.error(e);
       }
 
-      log(statusLabel, 'Device disconnected');
+      log(statusLabel, 'Device disconnected successfully. Ready for next command.');
     }
   }
 
@@ -432,7 +432,7 @@ export class UsbSyncServer extends SyncServer {
         console.log(`Trying to get config from USBDeviceInfo`);
         connectionConfigFromUsbDeviceInfo =
           await this.getConnectionConfigFromUsbDeviceInfo(device);
-          
+
         if (
           connectionConfigFromInitFn &&
           connectionConfigFromUsbDeviceInfo &&
