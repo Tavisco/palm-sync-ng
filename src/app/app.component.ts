@@ -1,7 +1,8 @@
 
-import { Component } from "@angular/core"; 
-import { MenuItem } from "primeng/api"; 
-  
+import { Component } from "@angular/core";
+import { MenuItem } from "primeng/api";
+import { VERSION } from '../environments/version';
+
 @Component({ 
   selector: "app-root", 
   templateUrl: "./app.component.html",
@@ -9,7 +10,8 @@ import { MenuItem } from "primeng/api";
 }) 
 export class AppComponent { 
   gfg: MenuItem[] = []; 
-  
+  version = VERSION;
+
   ngOnInit() { 
     this.gfg = [ 
       { 

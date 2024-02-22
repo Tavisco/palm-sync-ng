@@ -271,7 +271,7 @@ export async function readRawDb(
       const readResourceResp = await dlpConnection.execute(
         DlpReadResourceByIndexReqType.with({dbId, index: i})
       );
-      console.log(`ok`);
+      // console.log(`ok`);
       records.push(createRawPrcRecordFromReadRecordResp(readResourceResp));
     }
     db = RawPrcDatabase.with({...dbFields, records});
@@ -282,7 +282,7 @@ export async function readRawDb(
       const readRecordResp = await dlpConnection.execute(
         DlpReadRecordByIndexReqType.with({dbId, index: i})
       );
-      console.log(`ok`);
+      // console.log(`ok`);
       if (
         (readRecordResp.attributes.delete ||
           readRecordResp.attributes.archive) &&

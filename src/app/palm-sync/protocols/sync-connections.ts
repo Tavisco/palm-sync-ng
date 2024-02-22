@@ -59,18 +59,18 @@ export class DlpConnection {
       encoding: DEFAULT_ENCODING,
       ...this.opts.requestSerializeOptions,
     });
-    console.log(
-      `Request >>> ${request.constructor.name} ${requestBuffer.toString('hex')}\n` +
-        `    ${JSON.stringify(request.toJSON())}`
-    );
+    // console.log(
+    //   `Request >>> ${request.constructor.name} ${requestBuffer.toString('hex')}\n` +
+    //     `    ${JSON.stringify(request.toJSON())}`
+    // );
 
     this.transport.write(requestBuffer);
-    console.log('Write OK');
+    // console.log('Write OK');
     const responseBuffer = (await pEvent(this.transport, 'data')) as Buffer;
 
-    console.log(
-      `Response <<< ${request.responseType.name} ${responseBuffer.toString('hex')}`
-    );
+    // console.log(
+    //   `Response <<< ${request.responseType.name} ${responseBuffer.toString('hex')}`
+    // );
     const response: DlpResponseType<DlpRequestT> = new request.responseType();
     try {
       response.deserialize(responseBuffer, {
@@ -153,7 +153,7 @@ export abstract class SyncConnection<DlpStreamT extends Duplex = Duplex> {
     // The DLP stream should propagate errors through, so we only need to listen
     // for errors at the DLP stream level.
     const errorListener = (e: Error) => {
-      console.log('Connection error: ' + (e.stack ? `${e.stack}` : e.message));
+      console.log('Connection error: ' +  e.message);
     };
     this.dlpTransportStream.on('error', errorListener);
 

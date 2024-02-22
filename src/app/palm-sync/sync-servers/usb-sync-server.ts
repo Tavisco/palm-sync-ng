@@ -180,7 +180,7 @@ export class UsbConnectionStream extends Duplex {
     encoding: BufferEncoding | 'buffer',
     callback: (error?: Error | null) => void
   ) {
-    console.log(`writing to endpoint ${this.config.outEndpoint}`);
+    // console.log(`writing to endpoint ${this.config.outEndpoint}`);
 
     if (encoding !== 'buffer' || !(chunk instanceof Buffer)) {
       callback(new Error(`Unsupported encoding ${encoding}`));
@@ -191,7 +191,7 @@ export class UsbConnectionStream extends Duplex {
       chunk
     );
 
-    console.log(`wrote ${result.status} - ${result.bytesWritten}`);
+    // console.log(`wrote ${result.status} - ${result.bytesWritten}`);
     if (result.status === 'ok') {
       callback(null);
     } else {
@@ -203,11 +203,8 @@ export class UsbConnectionStream extends Duplex {
   override async _read(size: number) {
     let result: USBInTransferResult;
     try {
-      console.log(`reading size ${size}`);
-      result = await this.device.transferIn(this.config.inEndpoint, size);
+      result = await this.device.transferIn(this.config.inEndpoint, 64);
     } catch (e) {
-      // console.log(`Failed!!!!!!!`);
-      // console.log(e);
       console.error(
         'USB read error: ' + (e instanceof Error ? e.message : `${e}`)
       );
@@ -219,7 +216,6 @@ export class UsbConnectionStream extends Duplex {
       return;
     }
     if (result.status === 'ok') {
-      console.log(`reading size ${size} OK!!`);
       this.push(
         result.data ? Buffer.from(result.data.buffer) : Buffer.alloc(0)
       );
@@ -431,25 +427,31 @@ export class UsbSyncServer extends SyncServer {
       connectionConfigFromInitFn = await this.USB_INIT_FNS[
         deviceConfig.initType
       ](device);
-      console.log(`Trying to get config from USBDeviceInfo`);
-      connectionConfigFromUsbDeviceInfo =
-        await this.getConnectionConfigFromUsbDeviceInfo(device);
+      if (!connectionConfigFromInitFn)
+      {
+        console.log(`Trying to get config from USBDeviceInfo`);
+        connectionConfigFromUsbDeviceInfo =
+          await this.getConnectionConfigFromUsbDeviceInfo(device);
+          
+        if (
+          connectionConfigFromInitFn &&
+          connectionConfigFromUsbDeviceInfo &&
+          !isEqual(connectionConfigFromInitFn, connectionConfigFromUsbDeviceInfo)
+        ) {
+          console.log(
+            'Connection config from init fn and from USB device info do not match: ' +
+              JSON.stringify(connectionConfigFromInitFn) +
+              ' vs ' +
+              JSON.stringify(connectionConfigFromUsbDeviceInfo)
+          );
+        }
+      }
+      
     } catch (e) {
       console.error(`Exception during connection configuration: ${e}`);
       return {device, stream: null};
     }
-    if (
-      connectionConfigFromInitFn &&
-      connectionConfigFromUsbDeviceInfo &&
-      !isEqual(connectionConfigFromInitFn, connectionConfigFromUsbDeviceInfo)
-    ) {
-      console.log(
-        'Connection config from init fn and from USB device info do not match: ' +
-          JSON.stringify(connectionConfigFromInitFn) +
-          ' vs ' +
-          JSON.stringify(connectionConfigFromUsbDeviceInfo)
-      );
-    }
+
     const connectionConfig =
       connectionConfigFromInitFn || connectionConfigFromUsbDeviceInfo;
 
