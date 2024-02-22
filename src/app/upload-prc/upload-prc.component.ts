@@ -85,7 +85,6 @@ export class UploadPrcComponent {
       }
     });
 
-    this.statusLabel.next('Sync finished!');
   }
 
   // Helper function to format bytes into human-readable sizes

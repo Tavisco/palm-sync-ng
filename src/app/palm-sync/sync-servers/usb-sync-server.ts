@@ -315,10 +315,8 @@ export class UsbSyncServer extends SyncServer {
     this.emit('connect', connection);
 
     log(statusLabel, 'Starting handshake');
-    statusLabel.next('Starting handshake');
     await connection.doHandshake();
     log(statusLabel, 'Handshake complete');
-    statusLabel.next('Handshake complete');
 
     await connection.start();
 
@@ -327,11 +325,10 @@ export class UsbSyncServer extends SyncServer {
       await this.syncFn(connection.dlpConnection);
     } catch (e) {
       log(statusLabel, 
-        'Sync error: ' + (e instanceof Error ? e.stack || e.message : `${e}`)
+        'FAILED: ' +  `${e}`
       );
     }
     log(statusLabel, 'syncFn finished executing. Closing connection.');
-    statusLabel.next('Command finished executing. Closing connection.');
 
     await connection.end();
     this.emit('disconnect', connection);
