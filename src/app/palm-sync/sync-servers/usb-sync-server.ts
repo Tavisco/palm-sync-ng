@@ -180,7 +180,7 @@ export class UsbConnectionStream extends Duplex {
     encoding: BufferEncoding | 'buffer',
     callback: (error?: Error | null) => void
   ) {
-    // console.log(`writing to endpoint ${this.config.outEndpoint}`);
+    // console.log(`USB: writing to endpoint ${this.config.outEndpoint}`);
 
     if (encoding !== 'buffer' || !(chunk instanceof Buffer)) {
       callback(new Error(`Unsupported encoding ${encoding}`));
@@ -191,7 +191,7 @@ export class UsbConnectionStream extends Duplex {
       chunk
     );
 
-    // console.log(`wrote ${result.status} - ${result.bytesWritten}`);
+    // console.log(`USB: wrote ${result.status} - ${result.bytesWritten}`);
     if (result.status === 'ok') {
       callback(null);
     } else {
@@ -202,6 +202,7 @@ export class UsbConnectionStream extends Duplex {
 
   override async _read(size: number) {
     let result: USBInTransferResult;
+    // console.log(`USB: Reading 64`)
     try {
       result = await this.device.transferIn(this.config.inEndpoint, 64);
     } catch (e) {
@@ -216,6 +217,7 @@ export class UsbConnectionStream extends Duplex {
       return;
     }
     if (result.status === 'ok') {
+      // console.log(`USB: Read OK! ${result.data?.byteLength}`)
       this.push(
         result.data ? Buffer.from(result.data.buffer) : Buffer.alloc(0)
       );
@@ -400,7 +402,7 @@ export class UsbSyncServer extends SyncServer {
       console.log('No configurations available for USB device');
       return {device, stream: null};
     }
-    console.log(`Device has configuration, and has [${device.configuration.interfaces.length}] interfaces`);
+    console.log(`Device has configuration, and has [${device.configuration.interfaces.length}] interfaces. Claiming interfaces...`);
     if (device.configuration.interfaces.length < 1) {
       console.log(
         `No interfaces available in configuration ${device.configuration.configurationValue}`
@@ -556,7 +558,7 @@ export class UsbSyncServer extends SyncServer {
     let response: GetConnectionInfoResponse;
     console.log(`Trying initialization method: GetConnectionInfo`);
 
-    let index = 0;
+    let index = 2;
 
     const sendcmd = async (): Promise<GetConnectionInfoResponse> => {
       console.log(`Trying with index [${index}]`);
@@ -610,7 +612,7 @@ export class UsbSyncServer extends SyncServer {
     let response: GetExtConnectionInfoResponse;
     console.log(`Trying initialization method: GetExtConnectionInfo`);
 
-    let index = 0;
+    let index = 2;
 
     const sendcmd = async (): Promise<GetExtConnectionInfoResponse> => {
       console.log(`Trying with index [${index}]`);
@@ -720,12 +722,17 @@ export class UsbSyncServer extends SyncServer {
 
       console.log(`Trying to initialize device...`);
 
-      // First try GetExtConnectionInfo. Some devices may have different in and
-      // out endpoints, which can only be fetched with GetExtConnectionInfo.
-      config = await this.getConnectionConfigUsingGetExtConnectionInfo(device);
-      if (config) {
-        return config;
+      try {
+        // First try GetExtConnectionInfo. Some devices may have different in and
+        // out endpoints, which can only be fetched with GetExtConnectionInfo.
+        config = await this.getConnectionConfigUsingGetExtConnectionInfo(device);
+        if (config) {
+          return config;
       }
+      } catch (error) {
+        console.log(`Failed! ${error}`)
+      }
+      
 
       console.log(`Getting configs directly from device failed. Falling back to GetConnectionInfo`);
       // If GetExtConnectionInfo isn't supported, fall back to GetConnectionInfo.

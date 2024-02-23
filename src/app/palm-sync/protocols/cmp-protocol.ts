@@ -1,4 +1,4 @@
-import pEvent from 'p-event';
+import * as pEvent from 'p-event';
 import {
   bitfield,
   DeserializeOptions,
@@ -129,7 +129,7 @@ export async function doCmpHandshake(
   stream: PadpStream,
   suggestedBaudRate?: number
 ) {
-
+  console.log(`Starting CMP Handshake...`);
   // Read initial WAKEUP.
   const wakeupDatagram = CmpDatagram.from(await pEvent(stream, 'data'));
   if (wakeupDatagram.type !== CmpDatagramType.WAKEUP) {

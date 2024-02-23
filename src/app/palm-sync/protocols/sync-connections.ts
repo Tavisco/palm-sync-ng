@@ -1,5 +1,5 @@
 
-import pEvent from 'p-event';
+import * as pEvent from 'p-event';
 import {Duplex} from 'readable-stream';
 import {doCmpHandshake} from './cmp-protocol';
 import {
@@ -144,7 +144,7 @@ export abstract class SyncConnection<DlpStreamT extends Duplex = Duplex> {
     );
     this.dlpConnection = new DlpConnection(this.dlpTransportStream, this.opts);
 
-    console.log(`Connection established`);
+    console.log(`DLP stream created`);
 
     // if (this.rawStream instanceof Socket) {
     //   this.rawStream.setNoDelay(true);

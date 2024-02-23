@@ -173,6 +173,7 @@ const PADP_PACKET_DATA_SIZE = PADP_MAX_PKT_DATA_SIZE / 2;
 export class PadpStream extends Duplex {
   constructor(rawStream: Duplex, opts?: DuplexOptions) {
     super(opts);
+    console.log(`Creating Padp duplex`)
     this.slpDatagramStream = createSlpDatagramStream(rawStream);
     this.slpDatagramStream.on('data', this.onReceiveSlpDatagram.bind(this));
     this.slpDatagramStream.on('error', (e) =>

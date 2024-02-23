@@ -11,6 +11,7 @@ import {
 } from 'serio';
 import {SmartBuffer} from 'smart-buffer';
 import {Duplex, Transform} from 'readable-stream';
+import { TransformCallback } from 'node:stream';
 
 /** CRC-16 implementation.
  *
@@ -234,9 +235,11 @@ export class SlpDatagram extends SerializableWrapper<Buffer> {
 export class SlpDatagramReadStream extends Transform {
   override _transform(
     chunk: any,
-    encoding: BufferEncoding | 'buffer'
+    encoding: BufferEncoding | 'buffer',
+    callback: TransformCallback
   ) {
     if (encoding !== 'buffer' || !(chunk instanceof Buffer)) {
+      callback(new Error(`Unsupported encoding ${encoding}`));
       return;
     }
 
@@ -263,6 +266,7 @@ export class SlpDatagramReadStream extends Transform {
       // If we still haven't received the full header, then let's try again when
       // we receive the next chunk.
       if (this.currentDatagram.data.length < SLP_DATAGRAM_HEADER_LENGTH) {
+        callback(null);
         return;
       }
       // Otherwise, let's parse the header.
@@ -293,7 +297,9 @@ export class SlpDatagramReadStream extends Transform {
     // If there is more data remaining in the current chunk, recurse on the
     // remaining data and start parsing another datagram.
     if (reader.remaining()) {
-      this._transform(reader.readBuffer(), encoding);
+      this._transform(reader.readBuffer(), encoding, callback);
+    } else {
+      callback(null);
     }
   }
 
@@ -314,15 +320,18 @@ export class SlpDatagramReadStream extends Transform {
 export class SlpSeekReadStream extends Transform {
   override _transform(
     chunk: any,
-    encoding: BufferEncoding | 'buffer'
+    encoding: BufferEncoding | 'buffer',
+    callback: TransformCallback
   ) {
     if (encoding !== 'buffer' || !(chunk instanceof Buffer)) {
+      callback(new Error(`Unsupported encoding ${encoding}`));
       return;
     }
 
     // If we've already found the SLP signature, this stream becomes a
     // passthrough transform.
     if (this.hasFoundSlpSignature) {
+      callback(null, chunk);
       return;
     }
 
@@ -344,6 +353,7 @@ export class SlpSeekReadStream extends Transform {
       const skippedLength = this.previousChunksLength + slpSignatureIdx;
       console.log(`--- Found SLP signature after skipping ${skippedLength} bytes`);
       this.hasFoundSlpSignature = true;
+      callback(null, mergedChunk.slice(slpSignatureIdx));
       return;
     }
 
@@ -375,10 +385,11 @@ export class SlpSeekReadStream extends Transform {
     }
     const lengthSkipped =
       chunk.length - this.partialSignatureFromPreviousChunk.length;
-    console.log(
+      console.log(
       `--- Skipping ${lengthSkipped} bytes ` +
         `(${this.previousChunksLength} total)`
     );
+    callback(null);
   }
 
   /** Whether we've already found the SLP signature. */
@@ -394,6 +405,7 @@ export type SlpDatagramStream = Duplex;
 
 /** Create an SLP datagram stream on top of a raw data stream. */
 export function createSlpDatagramStream(rawStream: Duplex): SlpDatagramStream {
+  console.log(`Creating SLP Datagram stream`)
   const slpSeekReadStream = new SlpSeekReadStream();
   rawStream.pipe(slpSeekReadStream);
   const readStream = new SlpDatagramReadStream();

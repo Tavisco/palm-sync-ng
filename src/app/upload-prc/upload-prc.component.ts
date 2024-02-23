@@ -4,7 +4,7 @@ import { UsbSyncServer } from '../palm-sync/sync-servers/usb-sync-server';
 
 import {SyncConnectionOptions} from '../palm-sync/protocols/sync-connections';
 import {SyncFn, SyncServer} from '../palm-sync/sync-servers/sync-server';
-import pEvent from 'p-event';
+import * as pEvent from 'p-event';
 import { SyncConnection } from '../palm-sync/protocols/sync-connections';
 import { HANDELD_VENDORS_ID } from '../palm-sync/sync-servers/usb-device-configs';
 import { writeDbFromBuffer } from '../palm-sync/sync-utils/write-db';
