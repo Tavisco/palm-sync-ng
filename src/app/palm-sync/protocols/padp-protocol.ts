@@ -197,11 +197,11 @@ export class PadpStream extends Duplex {
   /** Handle receiving a new SLP datagram. */
   onReceiveSlpDatagram(chunk: Buffer) {
     const slpDatagram = SlpDatagram.from(chunk);
-    console.log(
-      `<<< ${SlpDatagramType[slpDatagram.header.type]} ` +
-        `xid ${slpDatagram.header.xid}: ` +
-        chunk.toString('hex')
-    );
+    // console.log(
+    //   `<<< ${SlpDatagramType[slpDatagram.header.type]} ` +
+    //     `xid ${slpDatagram.header.xid}: ` +
+    //     chunk.toString('hex')
+    // );
     switch (slpDatagram.header.type) {
       case SlpDatagramType.LOOPBACK:
         // Ignore
@@ -233,10 +233,10 @@ export class PadpStream extends Duplex {
           );
           return;
         }
-        console.log(
-          `<<< ACK xid ${this.ackListener.xid} ` +
-            `[@${this.ackListener.sizeOrOffset}]`
-        );
+        // console.log(
+        //   `<<< ACK xid ${this.ackListener.xid} ` +
+        //     `[@${this.ackListener.sizeOrOffset}]`
+        // );
         this.ackListener.resolve();
         this.ackListener = null;
         return;
@@ -260,20 +260,20 @@ export class PadpStream extends Duplex {
       // sizeOrOffset. Our ACK either got lost or didn't arrive on time, so
       // the Palm device is retrying sending the same datagram. We will ignore
       // this datagram but will send back another ACK.
-      console.log(
-        '--- Ignoring duplicate PADP xid ' +
-          `${slpDatagram.header.xid} ` +
-          `[@${padpDatagram.header.sizeOrOffset.value}]`
-      );
+      // console.log(
+      //   '--- Ignoring duplicate PADP xid ' +
+      //     `${slpDatagram.header.xid} ` +
+      //     `[@${padpDatagram.header.sizeOrOffset.value}]`
+      // );
     } else {
       // If we just sent a message and we're still waiting for the ACK, but then
       // receive a DATA message that has the same XID, it means the current
       // message is the reply to our earlier message and the ACK from the Palm
       // device was lost.
       if (this.ackListener && slpDatagram.header.xid === this.ackListener.xid) {
-        console.log(
-          `--- Received PADP xid ${slpDatagram.header.xid} reply without ACK`
-        );
+        // console.log(
+        //   `--- Received PADP xid ${slpDatagram.header.xid} reply without ACK`
+        // );
         this.ackListener.resolve();
         this.ackListener = null;
       }
@@ -342,9 +342,9 @@ export class PadpStream extends Duplex {
           return;
         }
         this.push(this.currentMessage.data.toBuffer());
-        console.log(
-          `<<< PUSH ${this.currentMessage.data.toBuffer().toString('hex')}`
-        );
+        // console.log(
+        //   `<<< PUSH ${this.currentMessage.data.toBuffer().toString('hex')}`
+        // );
         this.currentMessage = null;
       } else {
         // Current message is not yet complete.
@@ -361,11 +361,11 @@ export class PadpStream extends Duplex {
     // Send ACK after processing a DATA datagram.
     const ackSlpDatagram = this.createAckSlpDatagram(slpDatagram, padpDatagram);
     this.lastProcessedPadpDataChunk = chunk;
-    console.log(
-      `>>> ACK xid ${ackSlpDatagram.header.xid} ` +
-        `[@${padpDatagram.header.sizeOrOffset.value}]: ` +
-        ackSlpDatagram.serialize().toString('hex')
-    );
+    // console.log(
+    //   `>>> ACK xid ${ackSlpDatagram.header.xid} ` +
+    //     `[@${padpDatagram.header.sizeOrOffset.value}]: ` +
+    //     ackSlpDatagram.serialize().toString('hex')
+    // );
     this.slpDatagramStream.write(
       ackSlpDatagram.serialize(),
       'buffer' as BufferEncoding,
@@ -433,13 +433,13 @@ export class PadpStream extends Duplex {
 
         // Write SLP and wait for confirmation.
         const slpDatagramBuffer = slpDatagram.serialize();
-        console.log(
-          `>>> PADP xid ${xid} ` +
-            `${i + 1}/${pieces.length} ` +
-            `[@${padpDatagram.header.sizeOrOffset.value}]: ` +
-            slpDatagramBuffer.toString('hex') +
-            (retryId > 0 ? ` (try #${retryId + 1})` : '')
-        );
+        // console.log(
+        //   `>>> PADP xid ${xid} ` +
+        //     `${i + 1}/${pieces.length} ` +
+        //     `[@${padpDatagram.header.sizeOrOffset.value}]: ` +
+        //     slpDatagramBuffer.toString('hex') +
+        //     (retryId > 0 ? ` (try #${retryId + 1})` : '')
+        // );
         try {
           await new Promise<void>((resolve, reject) =>
             this.slpDatagramStream.write(
@@ -461,11 +461,11 @@ export class PadpStream extends Duplex {
           callback(new Error('Internal error: multiple concurrent writes'));
           return;
         }
-        console.log(
-          `--- Waiting for ACK on xid ${xid} ` +
-            `${i + 1}/${pieces.length} ` +
-            `[@${padpDatagram.header.sizeOrOffset.value}]`
-        );
+        // console.log(
+        //   `--- Waiting for ACK on xid ${xid} ` +
+        //     `${i + 1}/${pieces.length} ` +
+        //     `[@${padpDatagram.header.sizeOrOffset.value}]`
+        // );
         try {
           await new Promise<void>((resolve, reject) => {
             this.ackListener = {
